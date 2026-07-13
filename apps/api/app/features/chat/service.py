@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.agents.chat.graph import ChatGraphRunner
 from app.agents.chat.provider import DeterministicMockProvider, LLMProvider, OpenAIResponsesProvider
 from app.agents.chat.retrieval import CuratedOfficialRetriever, MockRetriever, Retriever
-from app.agents.chat.state import ChatGraphState
+from app.agents.chat.state import BusinessContext, ChatGraphState, ConversationMessage
 from app.core.config import Settings
 from app.features.chat.models import AuthenticatedActor, ChatMessage, MessageRole
 from app.features.chat.repository import (
@@ -17,6 +17,8 @@ from app.features.chat.repository import (
     SqlAlchemyMessageRepository,
 )
 from app.features.chat.schemas import (
+    ChatHistoryItem,
+    ChatHistoryResponse,
     ChatStreamEvent,
     CitationPreviewEvent,
     FinalEvent,
@@ -56,9 +58,19 @@ class ChatService:
         actor: AuthenticatedActor,
         conversation_id: UUID,
         message: str,
+        business_context: BusinessContext,
         correlation_id: UUID,
         is_disconnected: DisconnectCheck,
     ) -> AsyncIterator[ChatStreamEvent]:
+        history = await self._repository.list_for_conversation(
+            tenant_id=actor.tenant_id,
+            actor_id=actor.actor_id,
+            conversation_id=conversation_id,
+        )
+        visible_history = tuple(
+            ConversationMessage(role=item.role.value, content=item.content)
+            for item in history[-12:]
+        )
         user_message = ChatMessage(
             conversation_id=conversation_id,
             actor_id=actor.actor_id,
@@ -67,6 +79,9 @@ class ChatService:
             content=message,
         )
         await self._repository.add(user_message)
+        yield StatusEvent(status="understanding")
+        if await is_disconnected():
+            return
         yield StatusEvent(status="retrieving")
         if await is_disconnected():
             return
@@ -78,6 +93,8 @@ class ChatService:
                 tenant_id=actor.tenant_id,
                 correlation_id=correlation_id,
                 user_message=message,
+                business_context=business_context,
+                conversation=visible_history,
                 prompt_version=self._prompt_version,
             )
         )
@@ -111,6 +128,26 @@ class ChatService:
             prompt_version=result.prompt_version,
         )
 
+    async def history(
+        self, *, actor: AuthenticatedActor, conversation_id: UUID
+    ) -> ChatHistoryResponse:
+        messages = await self._repository.list_for_conversation(
+            tenant_id=actor.tenant_id,
+            actor_id=actor.actor_id,
+            conversation_id=conversation_id,
+        )
+        return ChatHistoryResponse(
+            conversation_id=conversation_id,
+            items=tuple(
+                ChatHistoryItem(
+                    role=item.role,
+                    content=item.content,
+                    citation_ids=item.citation_ids,
+                )
+                for item in messages
+            ),
+        )
+
 
 def create_default_chat_service(
     *,
@@ -139,5 +176,5 @@ def create_default_chat_service(
         )
     graph = ChatGraphRunner(retriever=retriever, provider=provider)
     return ChatService(
-        graph=graph, repository=repository, prompt_version="chat.grounded.v1"
+        graph=graph, repository=repository, prompt_version="chat.advisor.v2"
     ), repository

@@ -68,7 +68,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.auth_service = auth_service
     application.state.database_engine = engine
     retriever = None
-    if resolved_settings.retrieval_provider == "opensearch":
+    if (
+        resolved_settings.environment != "test"
+        and resolved_settings.retrieval_provider == "opensearch"
+    ):
         search_client = httpx.AsyncClient(timeout=10.0)
         retriever = OpenSearchHybridRetriever(
             client=HttpOpenSearchClient(

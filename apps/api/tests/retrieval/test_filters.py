@@ -5,7 +5,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from app.retrieval.models import LanguageCode, RetrievalFilters, SchemeStatus
+from app.retrieval.models import LanguageCode, RetrievalFilters, SchemeStatus, SourceKind
 from app.retrieval.queries import build_bm25_query, build_filter_clauses, build_vector_query
 
 
@@ -15,6 +15,7 @@ def test_all_supported_filters_are_applied_to_both_queries() -> None:
         scheme_status=SchemeStatus.PUBLISHED,
         language=LanguageCode.ENGLISH,
         effective_on=date(2026, 7, 13),
+        source_kind=SourceKind.OFFICIAL_SCHEME,
     )
 
     clauses = build_filter_clauses(filters)
@@ -25,6 +26,7 @@ def test_all_supported_filters_are_applied_to_both_queries() -> None:
     assert {"term": {"state_codes.keyword": "EXA"}} in clauses
     assert {"term": {"scheme_status.keyword": "published"}} in clauses
     assert {"term": {"language.keyword": "en"}} in clauses
+    assert {"term": {"source_kind.keyword": "official_scheme"}} in clauses
     assert {"range": {"valid_from": {"lte": "2026-07-13"}}} in clauses
     assert lexical["query"] == {
         "bool": {
@@ -52,9 +54,9 @@ def test_all_supported_filters_are_applied_to_both_queries() -> None:
         ("scheme_status", "invented"),
         ("language", "xx"),
         ("unknown", "value"),
+        ("source_kind", "invented"),
     ],
 )
 def test_invalid_filter_values_are_rejected(field: str, value: str) -> None:
     with pytest.raises(ValidationError):
         RetrievalFilters.model_validate({field: value})
-

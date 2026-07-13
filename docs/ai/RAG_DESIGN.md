@@ -12,9 +12,9 @@ All retrieved content is untrusted input. It may contain errors, stale statement
 
 ### Implementation snapshot
 
-The API can select either a curated development retriever or the OpenSearch hybrid retriever. The latter runs BM25 and vector queries, applies validated filters, fuses rankings with reciprocal-rank fusion, deduplicates chunks, and retains citation metadata. The worker reads a reviewed allowlist manifest, applies HTTPS/redirect/host/size controls, extracts visible HTML text, creates deterministic chunks and hash-derived development embeddings, and writes the versioned index. The answer provider is deterministic by default with an optional OpenAI adapter.
+The API can select either a curated development retriever or the OpenSearch hybrid retriever. The latter runs BM25 and vector queries, applies validated filters, fuses rankings with reciprocal-rank fusion, deduplicates chunks, and retains citation metadata. The worker reads a reviewed allowlist manifest, applies HTTPS/redirect/host/streaming-size controls, extracts visible HTML or bounded text-bearing PDF pages, creates deterministic chunks and hash-derived development embeddings, and writes the versioned index. Evidence is typed as `official_scheme` or `business_guide`; only the former may support material scheme claims. The answer provider is deterministic by default with an optional OpenAI adapter.
 
-This slice does not yet provide immutable raw-content object snapshots, PostgreSQL-backed ingestion/publication jobs, reviewer approval UI, a production embedding provider, scheduled refresh, or the claim-level citation validator described below. Those remain launch gates, not implied current behavior.
+The reviewed local manifest currently contains four official government sources and two CC BY business textbooks fetched from the Library of Congress. It is documented in `apps/worker/sources/README.md`. This slice does not yet provide immutable raw-content object snapshots, PostgreSQL-backed ingestion/publication jobs, reviewer approval UI, a production embedding provider, scheduled refresh, or the claim-level citation validator described below. Those remain launch gates, not implied current behavior.
 
 ## 2. MVP versus later phases
 

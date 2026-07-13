@@ -15,6 +15,7 @@ from app.retrieval.models import (
     RetrievalFilters,
     RetrievalQuery,
     RetrievalResult,
+    SourceKind,
 )
 from app.retrieval.queries import build_bm25_query, build_vector_query
 
@@ -70,13 +71,29 @@ class OpenSearchHybridRetriever:
         )
 
     async def retrieve(self, query: str) -> tuple[RetrievedEvidence, ...]:
-        """Satisfy the existing chat Retriever interface with current published evidence."""
-        results = await self.search(
-            RetrievalQuery(
-                query=query,
-                filters=RetrievalFilters(effective_on=self._clock()),
-                limit=5,
-            )
+        """Return a deliberate balance of official paths and general business guidance."""
+        official, guides = await asyncio.gather(
+            self.search(
+                RetrievalQuery(
+                    query=query,
+                    filters=RetrievalFilters(
+                        effective_on=self._clock(), source_kind=SourceKind.OFFICIAL_SCHEME
+                    ),
+                    limit=3,
+                )
+            ),
+            self.search(
+                RetrievalQuery(
+                    query=query,
+                    filters=RetrievalFilters(
+                        effective_on=self._clock(), source_kind=SourceKind.BUSINESS_GUIDE
+                    ),
+                    limit=2,
+                )
+            ),
+        )
+        results = tuple(
+            {item.source_chunk_id: item for item in (*official, *guides)}.values()
         )
         return tuple(
             RetrievedEvidence(
@@ -89,6 +106,8 @@ class OpenSearchHybridRetriever:
                     page=result.page,
                     section=result.section,
                     excerpt=result.content[:500],
+                    source_kind=result.source_kind.value,
+                    license_label=result.license_label,
                 ),
             )
             for result in results

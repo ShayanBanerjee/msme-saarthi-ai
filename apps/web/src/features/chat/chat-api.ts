@@ -4,22 +4,53 @@ export interface ChatCitation {
   readonly source_url: string;
   readonly section: string;
   readonly excerpt: string;
+  readonly source_kind: "official_scheme" | "business_guide";
+  readonly license_label: string | null;
+}
+
+export interface BusinessContext {
+  readonly stage?: "idea" | "starting" | "operating" | "scaling";
+  readonly goal?: "start" | "fund" | "sell" | "formalise" | "improve";
+  readonly location?: string;
+  readonly sector?: string;
+}
+
+export interface ChatHistoryItem {
+  readonly role: "user" | "assistant";
+  readonly content: string;
+  readonly citation_ids: readonly string[];
 }
 
 export interface ChatCallbacks {
-  readonly onStatus: (status: "retrieving" | "generating") => void;
+  readonly onStatus: (status: "understanding" | "retrieving" | "generating") => void;
   readonly onText: (text: string) => void;
   readonly onCitation: (citation: ChatCitation) => void;
 }
 
 export class ChatApiError extends Error {}
 
-export async function streamChatMessage(conversationId: string, message: string, callbacks: ChatCallbacks): Promise<void> {
+export async function getChatHistory(conversationId: string): Promise<readonly ChatHistoryItem[]> {
+  const response = await fetch(`/api/v1/chat/conversations/${conversationId}/messages`, {
+    credentials: "include",
+  });
+  if (!response.ok) throw new ChatApiError("Saarthi could not restore this workspace.");
+  const payload = await response.json() as { items: ChatHistoryItem[] };
+  return payload.items;
+}
+
+export async function streamChatMessage(
+  conversationId: string,
+  message: string,
+  businessContext: BusinessContext,
+  callbacks: ChatCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
   const response = await fetch(`/api/v1/chat/conversations/${conversationId}/messages`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, business_context: businessContext }),
+    signal,
   });
   if (!response.ok || !response.body) {
     const problem = (await response.json().catch(() => null)) as { detail?: string } | null;
@@ -38,7 +69,7 @@ export async function streamChatMessage(conversationId: string, message: string,
       const data = frame.split("\n").find((line) => line.startsWith("data:"))?.slice(5).trim();
       if (!event || !data) continue;
       const payload = JSON.parse(data) as Record<string, unknown>;
-      if (event === "status" && (payload.status === "retrieving" || payload.status === "generating")) callbacks.onStatus(payload.status);
+      if (event === "status" && (payload.status === "understanding" || payload.status === "retrieving" || payload.status === "generating")) callbacks.onStatus(payload.status);
       if (event === "text_delta" && typeof payload.text === "string") callbacks.onText(payload.text);
       if (event === "citation_preview") callbacks.onCitation(payload.citation as ChatCitation);
     }

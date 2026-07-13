@@ -25,13 +25,20 @@ class ChatGraphRunner:
         ] = builder.compile()
 
     async def _retrieve(self, state: ChatGraphState) -> dict[str, object]:
-        evidence = await self._retriever.retrieve(state.user_message)
+        focused_query = " ".join(
+            part
+            for part in (state.user_message, state.business_context.retrieval_text())
+            if part
+        )
+        evidence = await self._retriever.retrieve(focused_query)
         return {"evidence": evidence}
 
     async def _generate(self, state: ChatGraphState) -> dict[str, object]:
         response = await self._provider.generate(
             LLMGenerationRequest(
                 user_message=state.user_message,
+                business_context=state.business_context,
+                conversation=state.conversation,
                 evidence=state.evidence,
                 prompt_version=state.prompt_version,
             )

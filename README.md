@@ -23,6 +23,7 @@ The repository currently provides:
 - a protected, streamed LangGraph RAG assistant with curated official evidence and an optional OpenAI Responses API adapter;
 - PostgreSQL-backed completed chat history in shared-development and production configurations;
 - an allowlisted ingestion worker that extracts untrusted web text, chunks it, derives embeddings and writes a versioned OpenSearch index;
+- bounded text-bearing PDF extraction for reviewed government publications and openly licensed business guides;
 - an OpenSearch hybrid-retrieval adapter with BM25, vector retrieval and reciprocal-rank fusion;
 - a standalone deterministic eligibility engine; and
 - a curated, date-stamped official-source scheme discovery preview.
@@ -268,10 +269,11 @@ POST /api/v1/auth/logout
 GET  /api/v1/health/live
 GET  /api/v1/health/ready
 
+GET  /api/v1/chat/conversations/{conversation_id}/messages
 POST /api/v1/chat/conversations/{conversation_id}/messages
 ```
 
-The chat endpoint streams Server-Sent Events and requires a valid session. Retrieval is selected by configuration: the SQLite preview uses the curated adapter, while PostgreSQL bootstrap selects the ingested OpenSearch index. Answer generation is deterministic by default and can use the optional server-side OpenAI adapter.
+The chat endpoints require a valid session. `GET` restores the actor-scoped visible conversation and `POST` streams Server-Sent Events. Retrieval is selected by configuration: the SQLite preview uses the curated adapter, while PostgreSQL bootstrap selects the ingested OpenSearch index. Answer generation is deterministic by default and can use the optional server-side OpenAI adapter.
 
 ## Verification and tests
 

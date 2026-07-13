@@ -33,7 +33,7 @@ cd apps/worker
 cd ../..
 ```
 
-The manifest contains reviewed official-source entries. Retrieved pages remain untrusted evidence and are not eligibility rules.
+The manifest contains reviewed official government pages/PDFs and two Library of Congress-hosted CC BY business textbooks. Government material supports scheme discovery; books support general business techniques only. Retrieved pages remain untrusted evidence and are never eligibility rules. See the [source register](../apps/worker/sources/README.md).
 
 ## 3. Run the application
 

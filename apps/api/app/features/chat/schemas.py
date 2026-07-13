@@ -5,20 +5,37 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.agents.chat.state import Citation
+from app.agents.chat.state import BusinessContext, Citation
+from app.features.chat.models import MessageRole
 
 
 class ChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     message: str = Field(min_length=1, max_length=4_000)
+    business_context: BusinessContext = Field(default_factory=BusinessContext)
 
 
 class StatusEvent(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     event: Literal["status"] = "status"
-    status: Literal["retrieving", "generating"]
+    status: Literal["understanding", "retrieving", "generating"]
+
+
+class ChatHistoryItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    role: MessageRole
+    content: str
+    citation_ids: tuple[str, ...]
+
+
+class ChatHistoryResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    conversation_id: UUID
+    items: tuple[ChatHistoryItem, ...]
 
 
 class CitationPreviewEvent(BaseModel):
@@ -50,4 +67,3 @@ type ChatStreamEvent = StatusEvent | CitationPreviewEvent | TextDeltaEvent | Fin
 def encode_sse(event: ChatStreamEvent) -> str:
     """Serialize a typed event using the SSE event/data framing contract."""
     return f"event: {event.event}\ndata: {event.model_dump_json()}\n\n"
-

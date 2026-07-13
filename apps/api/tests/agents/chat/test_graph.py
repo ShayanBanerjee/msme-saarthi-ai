@@ -6,7 +6,7 @@ from uuid import UUID
 from app.agents.chat.graph import ChatGraphRunner
 from app.agents.chat.provider import DeterministicMockProvider
 from app.agents.chat.retrieval import MockRetriever
-from app.agents.chat.state import ChatGraphState
+from app.agents.chat.state import BusinessContext, BusinessStage, ChatGraphState
 
 
 def test_graph_retrieves_evidence_and_calls_provider() -> None:
@@ -18,6 +18,7 @@ def test_graph_retrieves_evidence_and_calls_provider() -> None:
         tenant_id=UUID("30000000-0000-0000-0000-000000000001"),
         correlation_id=UUID("40000000-0000-0000-0000-000000000001"),
         user_message="How does this synthetic demonstration work?",
+        business_context=BusinessContext(stage=BusinessStage.IDEA),
     )
 
     result = asyncio.run(graph.run(state))
@@ -27,4 +28,4 @@ def test_graph_retrieves_evidence_and_calls_provider() -> None:
     assert len(provider.calls) == 1
     assert provider.calls[0].user_message == state.user_message
     assert provider.calls[0].prompt_version == "chat.synthetic.v1"
-
+    assert provider.calls[0].business_context.stage == BusinessStage.IDEA

@@ -6,7 +6,9 @@
     "allowed_host": "pmegp.msme.gov.in",
     "valid_from": "2026-07-13",
     "language": "en",
-    "state_codes": []
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
   },
   {
     "source_id": "msme-udyam",
@@ -15,6 +17,54 @@
     "allowed_host": "www.udyamregistration.gov.in",
     "valid_from": "2026-07-13",
     "language": "en",
-    "state_codes": []
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "msme-scheme-booklet-2025",
+    "label": "Development Commissioner MSME · Schemes Booklet 2025–26",
+    "url": "https://dcmsme.gov.in/SAMACHAR/MSMESchemebooklet2025-26.pdf",
+    "allowed_host": "dcmsme.gov.in",
+    "valid_from": "2025-02-14",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "pdf",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "startup-schemes-playbook-2026",
+    "label": "Startup India · Government Schemes Playbook June 2026",
+    "url": "https://www.startupindia.gov.in/content/dam/startupindia/homebanners/Startup-Schemes-Playbook-June-2026.pdf",
+    "allowed_host": "www.startupindia.gov.in",
+    "valid_from": "2026-06-01",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "pdf",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "loc-entrepreneurship-open-textbook",
+    "label": "Library of Congress · Entrepreneurship",
+    "url": "https://tile.loc.gov/storage-services/master/gdc/gdcebookspublic/20/21/38/77/39/2021387739/2021387739.pdf",
+    "allowed_host": "tile.loc.gov",
+    "valid_from": "2020-01-01",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "pdf",
+    "source_kind": "business_guide",
+    "license_label": "CC BY 4.0"
+  },
+  {
+    "source_id": "loc-introduction-to-business",
+    "label": "Library of Congress · Introduction to Business",
+    "url": "https://tile.loc.gov/storage-services/master/gdc/gdcebookspublic/20/21/38/77/40/2021387740/2021387740.pdf",
+    "allowed_host": "tile.loc.gov",
+    "valid_from": "2018-01-01",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "pdf",
+    "source_kind": "business_guide",
+    "license_label": "CC BY 4.0"
   }
 ]

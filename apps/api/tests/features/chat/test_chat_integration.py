@@ -75,6 +75,12 @@ def test_authorized_chat_streams_sse_and_persists_messages() -> None:
         )
         assert [message.role for message in messages] == [MessageRole.USER, MessageRole.ASSISTANT]
 
+        history = client.get(
+            f"/api/v1/chat/conversations/{CONVERSATION_ID}/messages"
+        )
+        assert history.status_code == 200
+        assert [item["role"] for item in history.json()["items"]] == ["user", "assistant"]
+
 
 @pytest.mark.integration
 def test_unauthorized_chat_is_rejected() -> None:

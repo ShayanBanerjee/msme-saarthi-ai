@@ -1,6 +1,15 @@
 from datetime import date
 
-from worker.pipeline import SourceSpec, chunk_text, deterministic_embedding, extract_text
+from worker.pipeline import (
+    FetchedSource,
+    SourceKind,
+    SourceSpec,
+    chunk_text,
+    deterministic_embedding,
+    extract_pages,
+    extract_pdf_pages,
+    extract_text,
+)
 
 
 def test_extracts_visible_text_and_ignores_instructions_in_scripts() -> None:
@@ -31,3 +40,35 @@ def test_source_requires_allowlist_metadata() -> None:
         }
     )
     assert source.allowed_host == "example.test"
+
+
+def test_html_extraction_preserves_source_classification() -> None:
+    source = SourceSpec.model_validate(
+        {
+            "source_id": "synthetic-guide",
+            "label": "Synthetic open guide",
+            "url": "https://example.test/guide",
+            "allowed_host": "example.test",
+            "valid_from": date(2026, 1, 1),
+            "source_kind": "business_guide",
+            "license_label": "CC BY 4.0",
+        }
+    )
+    pages = extract_pages(
+        source,
+        FetchedSource(
+            body=b"<main>Visible synthetic business guidance.</main>",
+            content_type="text/html",
+        ),
+    )
+    assert source.source_kind == SourceKind.BUSINESS_GUIDE
+    assert pages[0].text == "Visible synthetic business guidance."
+
+
+def test_pdf_parser_rejects_non_pdf_content() -> None:
+    try:
+        extract_pdf_pages(b"not a PDF")
+    except ValueError as error:
+        assert "signature" in str(error)
+    else:
+        raise AssertionError("non-PDF content must be rejected")

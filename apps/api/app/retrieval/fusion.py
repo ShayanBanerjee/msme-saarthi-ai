@@ -70,5 +70,6 @@ def _to_result(item: _FusedHit) -> RetrievalResult:
         language=source.language,
         valid_from=source.valid_from,
         valid_until=source.valid_until,
+        source_kind=source.source_kind,
+        license_label=source.license_label,
     )
-

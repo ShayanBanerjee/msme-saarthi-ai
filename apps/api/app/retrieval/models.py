@@ -17,6 +17,11 @@ class LanguageCode(StrEnum):
     HINDI = "hi"
 
 
+class SourceKind(StrEnum):
+    OFFICIAL_SCHEME = "official_scheme"
+    BUSINESS_GUIDE = "business_guide"
+
+
 class RetrievalFilters(BaseModel):
     """Allowlisted structured filters; unknown values fail validation."""
 
@@ -26,6 +31,7 @@ class RetrievalFilters(BaseModel):
     scheme_status: SchemeStatus = SchemeStatus.PUBLISHED
     language: LanguageCode | None = None
     effective_on: date | None = None
+    source_kind: SourceKind | None = None
 
     @field_validator("state", mode="before")
     @classmethod
@@ -69,6 +75,8 @@ class OpenSearchDocument(BaseModel):
     language: LanguageCode
     valid_from: date
     valid_until: date | None = None
+    source_kind: SourceKind = SourceKind.OFFICIAL_SCHEME
+    license_label: str | None = Field(default=None, max_length=100)
 
     @model_validator(mode="after")
     def valid_effective_period(self) -> "OpenSearchDocument":
@@ -121,4 +129,5 @@ class RetrievalResult(BaseModel):
     language: LanguageCode
     valid_from: date
     valid_until: date | None
-
+    source_kind: SourceKind
+    license_label: str | None

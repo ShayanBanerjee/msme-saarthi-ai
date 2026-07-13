@@ -17,6 +17,8 @@ SOURCE_FIELDS = [
     "language",
     "valid_from",
     "valid_until",
+    "source_kind",
+    "license_label",
 ]
 
 
@@ -29,6 +31,8 @@ def build_filter_clauses(filters: RetrievalFilters) -> list[JsonObject]:
         clauses.append({"term": {"state_codes.keyword": filters.state}})
     if filters.language is not None:
         clauses.append({"term": {"language.keyword": filters.language.value}})
+    if filters.source_kind is not None:
+        clauses.append({"term": {"source_kind.keyword": filters.source_kind.value}})
     if filters.effective_on is not None:
         effective_on = filters.effective_on.isoformat()
         clauses.extend(
@@ -77,4 +81,3 @@ def build_vector_query(
             }
         },
     }
-

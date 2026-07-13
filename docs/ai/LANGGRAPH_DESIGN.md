@@ -10,7 +10,7 @@ LangGraph coordinates bounded conversational workflows: discovery, cited questio
 
 ### Implementation snapshot
 
-The current graph is intentionally smaller than the target graph below: typed state flows through `retrieve` and `generate` nodes, then the API streams versioned SSE events and persists the completed user/assistant turn to PostgreSQL. Retrieval is injected behind an interface and answer generation uses an application-owned provider interface with deterministic and OpenAI adapters. Disconnect handling and authenticated access are tested.
+The current graph is intentionally smaller than the target graph below: typed state carries a user-confirmed business brief and up to twelve prior visible messages through `retrieve` and `generate` nodes, then the API streams versioned SSE events and persists the completed user/assistant turn to PostgreSQL. Retrieval is injected behind an interface and answer generation uses an application-owned provider interface with deterministic and OpenAI adapters. The prompt asks focused context questions, separates official programme paths from general growth techniques, and never infers eligibility. Disconnect handling, history authorization, and authenticated access are tested.
 
 Intent routing, profile-field collection, deterministic assessment invocation, durable graph checkpoints, prompt-registry persistence, Gemini, and claim-level citation validation are not implemented yet. The fuller graph below remains the target contract.
 

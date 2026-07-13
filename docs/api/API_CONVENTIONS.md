@@ -33,7 +33,7 @@
 - Return `404` rather than confirming existence when a resource belongs to another tenant.
 - Email verification, password recovery, throttling, MFA, and optional OIDC federation are production launch work; adding them must preserve the service-boundary actor contract.
 
-Implemented endpoints are registration, login, current-session lookup, logout, liveness, readiness, and authenticated SSE chat. Other resources in this contract describe the intended versioned API and must not be presented as currently available.
+Implemented endpoints are registration, login, current-session lookup, logout, liveness, readiness, authenticated conversation-history reads, and authenticated SSE chat. Chat requests may include a bounded user-confirmed business brief (`stage`, `goal`, `location`, and `sector`); it focuses retrieval and generation but is not an eligibility profile or engine input. Other resources in this contract describe the intended versioned API and must not be presented as currently available.
 
 ## 4. Success responses
 
