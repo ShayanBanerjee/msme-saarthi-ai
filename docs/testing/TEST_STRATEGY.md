@@ -1,6 +1,6 @@
 # Test Strategy
 
-**Status:** Pre-implementation baseline  
+**Status:** Living strategy; module gates implemented, CI/E2E expansion pending
 **Last updated:** 2026-07-13  
 **Related:** [Product requirements](../product/PRD.md), [Threat model](../security/THREAT_MODEL.md)
 
@@ -99,17 +99,17 @@ Protected branches require relevant checks. Scheduled pipelines run broader eval
 
 ## 11. Standard commands
 
-```text
-make lint
-make typecheck
-make test
-make test-integration
-make test-e2e
+```bash
+make api-lint api-typecheck api-test api-test-integration
+make web-lint web-typecheck web-test web-build
+make worker-lint worker-typecheck worker-test
+make retrieval-test retrieval-test-integration
+make eligibility-lint eligibility-typecheck eligibility-test
+make api-migration-check
 ```
 
-Modules may expose narrower targets such as `make api-test` and `make web-typecheck`. Commands must be local/CI equivalent, documented, and never reported as passing unless executed.
+These module targets are the current verification interface. Root aggregate gates, Playwright coverage, disposable PostgreSQL integration fixtures, evaluation thresholds, security scanning, and GitHub Actions remain planned. Commands must be local/CI equivalent, documented, and never reported as passing unless executed.
 
 ## 12. Exit reporting
 
 Every task reports commands executed, result counts/status, skipped or unavailable checks, environment differences, coverage/evaluation changes where relevant, and remaining risks. A green test suite does not imply production readiness until operational launch gates also pass.
-

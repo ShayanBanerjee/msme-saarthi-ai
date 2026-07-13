@@ -1,12 +1,18 @@
 # LangGraph Orchestration Design
 
-**Status:** Pre-implementation baseline  
+**Status:** Living design; minimal cited-chat graph implemented
 **Last updated:** 2026-07-13  
 **Related:** [RAG design](RAG_DESIGN.md), [Eligibility engine](ELIGIBILITY_ENGINE.md), [API conventions](../api/API_CONVENTIONS.md)
 
 ## 1. Purpose
 
 LangGraph coordinates bounded conversational workflows: discovery, cited questions, profile field collection, deterministic assessment invocation, and explanation of stored results. It is orchestration, not a source of truth. Graph nodes call typed application services; they do not directly access PostgreSQL/OpenSearch or embed business rules in prompts.
+
+### Implementation snapshot
+
+The current graph is intentionally smaller than the target graph below: typed state flows through `retrieve` and `generate` nodes, then the API streams versioned SSE events and persists the completed user/assistant turn to PostgreSQL. Retrieval is injected behind an interface and answer generation uses an application-owned provider interface with deterministic and OpenAI adapters. Disconnect handling and authenticated access are tested.
+
+Intent routing, profile-field collection, deterministic assessment invocation, durable graph checkpoints, prompt-registry persistence, Gemini, and claim-level citation validation are not implemented yet. The fuller graph below remains the target contract.
 
 ## 2. MVP graph
 
@@ -126,4 +132,3 @@ Possible later graphs include reviewer assistance, proactive alerts, multilingua
 - Human handoff/support escalation UX.
 - Streaming protocol details and moderation policy.
 - Prompt approval roles and evaluation thresholds.
-

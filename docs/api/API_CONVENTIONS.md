@@ -1,6 +1,6 @@
 # API Conventions
 
-**Status:** Pre-implementation contract  
+**Status:** Living contract; authentication, health, and chat endpoints implemented
 **Last updated:** 2026-07-13  
 **Base path:** `/api/v1`  
 **Related:** [Data model](../architecture/DATA_MODEL.md), [Threat model](../security/THREAT_MODEL.md)
@@ -26,12 +26,14 @@
 
 ## 3. Authentication and authorization
 
-- Use an approved OIDC/OAuth 2.0 flow with short-lived access tokens; provider selection remains open.
-- Validate issuer, audience, signature, expiry, and allowed algorithm. Never accept identity/role from request bodies or unverified headers.
+- The MVP uses the first-party identity and encrypted-profile design in [ADR-0006](../architecture/adr/0006-first-party-identity-and-encrypted-profiles.md): Argon2id passwords, an opaque revocable server-side session, and an `HttpOnly`, `SameSite=Strict` cookie. Production cookies also require `Secure` and HTTPS.
+- Browser mutations validate the expected `Origin`. Never accept identity, tenant, or role from request bodies or unverified headers.
 - Services authorize every tenant-owned resource, including nested IDs, before data access or mutation.
 - Reviewer/admin endpoints require explicit permissions and emit audit events.
 - Return `404` rather than confirming existence when a resource belongs to another tenant.
-- Browser credential transport and CSRF controls must be decided together; if cookies are used, require `Secure`, `HttpOnly`, appropriate `SameSite`, and anti-CSRF protection.
+- Email verification, password recovery, throttling, MFA, and optional OIDC federation are production launch work; adding them must preserve the service-boundary actor contract.
+
+Implemented endpoints are registration, login, current-session lookup, logout, liveness, readiness, and authenticated SSE chat. Other resources in this contract describe the intended versioned API and must not be presented as currently available.
 
 ## 4. Success responses
 

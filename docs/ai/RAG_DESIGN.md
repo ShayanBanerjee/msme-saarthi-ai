@@ -1,6 +1,6 @@
 # Retrieval-Augmented Generation Design
 
-**Status:** Pre-implementation baseline  
+**Status:** Living design; hybrid retrieval and explicit ingestion slice implemented
 **Last updated:** 2026-07-13  
 **Related:** [Eligibility engine](ELIGIBILITY_ENGINE.md), [LangGraph design](LANGGRAPH_DESIGN.md), [ADR-0004](../architecture/adr/0004-opensearch-hybrid-retrieval.md)
 
@@ -9,6 +9,12 @@
 RAG supports scheme discovery, cited summaries, comparisons, checklists, and explanations of already-computed eligibility results. It does not create or evaluate eligibility rules. Structured, reviewed rules are supplied to the deterministic engine; unstructured evidence supplies citations and explanatory context.
 
 All retrieved content is untrusted input. It may contain errors, stale statements, or prompt-injection text. It is quoted as data within a bounded context and cannot issue instructions, select tools, modify graph policy, or change an eligibility result.
+
+### Implementation snapshot
+
+The API can select either a curated development retriever or the OpenSearch hybrid retriever. The latter runs BM25 and vector queries, applies validated filters, fuses rankings with reciprocal-rank fusion, deduplicates chunks, and retains citation metadata. The worker reads a reviewed allowlist manifest, applies HTTPS/redirect/host/size controls, extracts visible HTML text, creates deterministic chunks and hash-derived development embeddings, and writes the versioned index. The answer provider is deterministic by default with an optional OpenAI adapter.
+
+This slice does not yet provide immutable raw-content object snapshots, PostgreSQL-backed ingestion/publication jobs, reviewer approval UI, a production embedding provider, scheduled refresh, or the claim-level citation validator described below. Those remain launch gates, not implied current behavior.
 
 ## 2. MVP versus later phases
 
@@ -157,4 +163,3 @@ Record query/result IDs, versions, ranks/scores, filters, latency, provider/mode
 - Initial hybrid weights/RRF constants and evidence thresholds based on evaluation.
 - Parser/OCR boundary and safe document-processing service.
 - Human review workflow for conflicts, translations, and urgent withdrawal.
-

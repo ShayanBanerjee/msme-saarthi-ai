@@ -1,6 +1,6 @@
 # Data Model
 
-**Status:** Logical pre-implementation model  
+**Status:** Living logical model; identity/profile bootstrap and chat persistence implemented
 **Last updated:** 2026-07-13  
 **Related:** [Architecture overview](OVERVIEW.md), [Eligibility engine](../ai/ELIGIBILITY_ENGINE.md), [RAG design](../ai/RAG_DESIGN.md)
 
@@ -15,6 +15,8 @@
 - Tenant-owned rows carry `tenant_id`; repository queries and service authorization must both enforce scope.
 - Published content and completed assessments are immutable. Corrections create new versions.
 - Flexible JSON is allowed only for versioned, validated payloads; queryable identity, state, and relationship fields remain relational.
+
+The current Alembic schema implements encrypted users and tenants, memberships, sessions, enterprise-profile bootstrap records, and a compact `chat_messages` table. Source/scheme publication, assessment, prompt registry, durable ingestion, audit, commerce, and referral tables below are the intended model and are not yet present. The migration history, not this logical document, is authoritative for currently deployed columns.
 
 ## 2. Core relationships
 
@@ -42,11 +44,11 @@ AuditEvent -> actor + typed resource reference
 
 ### `users`
 
-External or internal identity reference. Fields: `id`, `identity_provider`, `subject`, `email_normalized` (nullable where provider permits), `status`, timestamps. Unique on provider/subject. Authentication credentials are not stored unless an approved in-house identity design explicitly requires it.
+The implemented first-party identity record uses `id`, encrypted email/name fields with key version, a domain-separated email blind index, Argon2id password hash, `status`, and timestamps. Plaintext passwords and reversible password encryption are forbidden. Optional federated identity links may be added later without changing the internal user identity.
 
 ### `tenants`
 
-Organization/security boundary. Fields: `id`, `name`, `slug`, `status`, timestamps. A single-owner account may still receive its own tenant to keep authorization consistent.
+Organization/security boundary. The current bootstrap stores `id`, encrypted display name with key version, `status`, and timestamps. A single-owner account receives its own tenant to keep authorization consistent. Human-readable unique slugs are deferred because they can leak business identity unless their privacy and lifecycle are explicitly designed.
 
 ### `memberships`
 
@@ -138,6 +140,8 @@ Completed decision and version references cannot be updated. Retrying infrastruc
 Fields: `id`, `assessment_id`, `rule_key`, `outcome` (`satisfied`, `failed`, `unknown`, `not_evaluated`), `actual_value_redacted`, `reason_code`, `citation_id`, `display_order`. Avoid duplicating sensitive profile values; store only what is needed for reproducibility and safe explanation.
 
 ## 8. Conversations
+
+The implemented MVP stores completed turns in `chat_messages` with `conversation_id`, `actor_id`, `tenant_id`, `role`, `content`, JSON citation identifiers, and `created_at`. It does not yet materialize conversation metadata or normalized message-citation joins. The target normalized model is:
 
 ### `conversations`
 

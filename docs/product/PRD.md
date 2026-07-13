@@ -1,6 +1,6 @@
 # Product Requirements Document
 
-**Status:** Pre-implementation baseline  
+**Status:** Living product contract; MVP partially implemented
 **Last updated:** 2026-07-13  
 **Owner:** Product and engineering  
 **Related:** [Architecture overview](../architecture/OVERVIEW.md), [Backlog](../planning/BACKLOG.md)
@@ -10,6 +10,8 @@
 MSME Saarthi AI helps Indian micro, small, and medium enterprises discover government schemes, understand cited scheme information, and assess potential eligibility. It combines approved-source retrieval with deterministic eligibility rules. It is decision support, not an application portal, legal opinion, or guarantee of approval.
 
 The core product promise is traceability: a user can see which profile facts and versioned rules produced an eligibility result, and which approved source supports every material scheme claim.
+
+The current product implements public scheme discovery, State/UT official-source navigation, self-service accounts and secure sessions, a founder shell, streamed cited chat, OpenSearch retrieval, explicit source ingestion, and the standalone eligibility engine. Saved profile editing, persisted assessments, reviewer administration/publication, audit views, recovery/MFA, payments/referrals, and production deployment remain incomplete. “Pro” is presentation and waitlist positioning only; no paid entitlement or checkout is active.
 
 ## 2. Problem
 

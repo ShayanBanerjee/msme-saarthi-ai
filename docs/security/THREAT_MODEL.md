@@ -1,11 +1,13 @@
 # Threat Model
 
-**Status:** Pre-implementation baseline  
+**Status:** Living threat model; MVP controls partially implemented
 **Last updated:** 2026-07-13  
 **Method:** STRIDE-informed, risk-ranked review  
 **Related:** [Architecture overview](../architecture/OVERVIEW.md), [RAG design](../ai/RAG_DESIGN.md), [API conventions](../api/API_CONVENTIONS.md)
 
 ## 1. Scope and security objectives
+
+Implemented controls include Argon2id password hashing, AES-256-GCM application-field encryption, HMAC email lookup, opaque hashed server-side sessions, strict same-site cookies, browser-origin checks, tenant-aware chat persistence, allowlisted ingestion with SSRF/content limits, and bounded untrusted-evidence prompts. Email verification/recovery, throttling, MFA, centralized audit events, managed key rotation, production network controls, immutable source snapshots, security automation, and incident exercises remain launch gaps.
 
 This model covers the React client, FastAPI modular monolith, worker processes, PostgreSQL, Redis, OpenSearch, external identity and model providers, payment provider, official-source ingestion, AWS infrastructure, CI/CD, and administrative workflows.
 
@@ -120,4 +122,3 @@ Referral codes must reveal no user data. Attribution and reward rules are immuta
 - Payment/referral provider and jurisdiction-specific compliance before those phases begin.
 
 Review this model at each major architecture change, before production, after a material incident, and at least annually.
-

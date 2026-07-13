@@ -1,12 +1,16 @@
 # Architecture Overview
 
-**Status:** Pre-implementation baseline  
+**Status:** Living architecture; MVP foundation partially implemented
 **Last updated:** 2026-07-13  
 **Related:** [Data model](DATA_MODEL.md), [API conventions](../api/API_CONVENTIONS.md), [Threat model](../security/THREAT_MODEL.md)
 
 ## 1. Architectural goals
 
 The architecture prioritizes deterministic eligibility, evidence provenance, tenant isolation, reviewable content publication, and independently testable modules. It starts as a modular monolith plus worker in a modular monorepo; package boundaries should remain valid if scaling later requires separation. This choice is recorded in [ADR-0001](adr/0001-modular-monolith-first.md).
+
+### Implementation snapshot
+
+The React application, FastAPI modular monolith, first-party encrypted identity/session persistence, PostgreSQL chat history, deterministic eligibility package, minimal LangGraph chat, OpenSearch hybrid retriever, and explicit allowlisted ingestion worker are implemented. Redis is provisioned locally but is not yet used for queues, locks, or rate limits. Durable publication/review records, immutable object snapshots, administration/audit workflows, payments/referrals, Terraform, and deployment CI remain planned architecture rather than implemented capability.
 
 ## 2. System context
 
@@ -140,9 +144,9 @@ LangGraph coordinates intent classification, safe retrieval, missing-field colle
 
 ## 8. Deployment baseline
 
-- Docker Compose provides local PostgreSQL, Redis, OpenSearch, API, worker, and web services.
-- GitHub Actions performs lint, type, unit, integration, security, migration, and build checks.
-- Terraform provisions AWS environments using separate state and least-privilege roles.
+- Docker Compose currently provides local PostgreSQL, Redis, and OpenSearch. API, worker, and web processes run on the host during development.
+- GitHub Actions deployment and comprehensive CI gates are planned; local `make` targets are the current verification interface.
+- Terraform provisioning remains planned. No AWS environment should be inferred from the architecture target.
 - Expected AWS building blocks are managed compute, PostgreSQL, Redis, OpenSearch, object storage, KMS, secrets management, WAF/load balancing, logging, and monitoring; exact services require an ADR before implementation.
 - Production uses private networking for data stores, TLS at boundaries, encrypted storage, immutable artifacts, health checks, and rolling or blue/green deployment.
 
@@ -158,7 +162,7 @@ LangGraph coordinates intent classification, safe retrieval, missing-field colle
 
 ## 10. Decisions still requiring ADRs
 
-- Authentication/identity provider and tenancy model.
+- Extension of the first-party identity design with email verification, recovery, MFA, and optional OIDC federation.
 - Queue implementation compatible with Redis and operational needs.
 - Model and embedding provider abstraction, regions, and data-processing terms.
 - Object storage snapshot format and malware/content scanning controls.

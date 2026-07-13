@@ -1,10 +1,26 @@
 # Implementation Backlog
 
-**Status:** Initial reviewable plan  
+**Status:** Living implementation plan
 **Last updated:** 2026-07-13  
 **Planning rule:** Each task has one objective, limited file ownership, dependencies, observable acceptance criteria, and verification commands. A task should normally be one reviewable commit; split it if implementation exceeds that boundary.
 
 All examples and fixtures must be synthetic. Tasks must follow `AGENTS.md` and the relevant design documents. Later-phase work is not authorized merely by appearing here.
+
+## Implementation snapshot
+
+| Task | State as of 2026-07-13 | Remaining boundary |
+|---|---|---|
+| API-01 | Implemented | Continue maintaining module gates and contracts |
+| WEB-01 | Substantially implemented | Full browser E2E and accessibility audit remain |
+| IDN-01 | Partially implemented via first-party ADR-0006 | Verification, recovery, throttling, MFA/OIDC, security audit events |
+| ELIG-01 | Implemented as a standalone deterministic package | API/assessment integration belongs to ASM-01 |
+| CHAT-01 | Implemented with PostgreSQL completed-turn persistence | Durable checkpoints and prompt registry remain |
+| RET-01 | Implemented | Production embedding/reranking evaluation remains |
+| ING-01 | Partially implemented | Immutable snapshots, durable jobs, reviewer publication and withdrawal workflow |
+| PROF-01, CAT-01, ASM-01 | Not implemented | Core MVP persistence and review workflows |
+| Later phases / OPS | Not implemented | Commerce, referrals, Terraform, CI/CD and production operations |
+
+This table is a status aid, not an acceptance record. A task is complete only when its scoped acceptance criteria and verification commands have been satisfied; later work should split stale objectives rather than silently broadening them.
 
 ## Phase 0 — Foundation
 
@@ -147,4 +163,3 @@ All examples and fixtures must be synthetic. Tasks must follow `AGENTS.md` and t
 - Payment/referral business model and compliance scope; both remain post-MVP by default.
 - AWS compute topology, provider regions/retention, RPO/RTO, and production load profile.
 - Numeric retrieval/evaluation thresholds, set only after a representative synthetic/pilot corpus is reviewed.
-

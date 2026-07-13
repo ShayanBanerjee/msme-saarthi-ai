@@ -4,6 +4,8 @@ MSME Saarthi AI is a production-shaped MVP for Indian entrepreneurs to discover 
 
 The language model is not allowed to decide eligibility. Material scheme claims must resolve to approved official evidence, and users must verify programme details at the linked government source before acting.
 
+For the shortest clean-clone setup, use the [full local quickstart](docs/QUICKSTART.md). Contributors should also read [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Current implementation status
 
 The repository currently provides:
@@ -178,6 +180,9 @@ MSME_SAARTHI_DATA_ENCRYPTION_KEY=<base64-encoded-32-byte-key>
 MSME_SAARTHI_DATA_ENCRYPTION_KEY_VERSION=v1
 MSME_SAARTHI_WEB_ORIGIN=http://127.0.0.1:5173
 MSME_SAARTHI_SESSION_COOKIE_SECURE=false
+MSME_SAARTHI_RETRIEVAL_PROVIDER=opensearch
+MSME_SAARTHI_OPENSEARCH_URL=http://127.0.0.1:9200
+MSME_SAARTHI_OPENSEARCH_INDEX=msme-schemes-v1
 ```
 
 Never commit `.env`, database files, session secrets or encryption keys. Local `.env` and runtime database files are ignored by Git.
@@ -266,7 +271,7 @@ GET  /api/v1/health/ready
 POST /api/v1/chat/conversations/{conversation_id}/messages
 ```
 
-The chat endpoint streams Server-Sent Events and requires a valid session. Its current retriever and model provider are deterministic development adapters.
+The chat endpoint streams Server-Sent Events and requires a valid session. Retrieval is selected by configuration: the SQLite preview uses the curated adapter, while PostgreSQL bootstrap selects the ingested OpenSearch index. Answer generation is deterministic by default and can use the optional server-side OpenAI adapter.
 
 ## Verification and tests
 
@@ -402,7 +407,7 @@ Stop the stale development process or use the already running instance. The smok
 
 ### OpenSearch exits during local startup
 
-Increase Docker Desktop memory and inspect `docker compose -f infrastructure/compose.yaml logs opensearch`. OpenSearch is not required for the current curated frontend preview or mocked chat slice.
+Increase Docker Desktop memory and inspect `docker compose -f infrastructure/compose.yaml logs opensearch`. OpenSearch is required for the full ingested-evidence path; switch `MSME_SAARTHI_RETRIEVAL_PROVIDER=curated` only when intentionally using the built-in preview evidence.
 
 ## Contributing and security
 
