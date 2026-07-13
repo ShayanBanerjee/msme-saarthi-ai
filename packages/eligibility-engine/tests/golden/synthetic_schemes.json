@@ -1,0 +1,121 @@
+[
+  {
+    "name": "eligible synthetic enterprise",
+    "profile": {
+      "state_code": "SYN-A",
+      "sector_code": "SYN-MFG",
+      "annual_turnover": "750000.25",
+      "employee_count": 12,
+      "years_in_operation": 3,
+      "is_registered": true
+    },
+    "rule_set": {
+      "scheme_version_id": "synthetic-scheme-v1",
+      "rule_set_version_id": "synthetic-rules-v1",
+      "root": {
+        "operator": "all",
+        "rule_id": "root",
+        "source_rule_id": "synthetic-source-root",
+        "rules": [
+          {
+            "operator": "in",
+            "rule_id": "location",
+            "source_rule_id": "synthetic-source-location",
+            "field": "state_code",
+            "values": ["SYN-A", "SYN-B"]
+          },
+          {
+            "operator": "less_than_or_equal",
+            "rule_id": "turnover",
+            "source_rule_id": "synthetic-source-turnover",
+            "field": "annual_turnover",
+            "value": "1000000.25"
+          },
+          {
+            "operator": "between",
+            "rule_id": "employees",
+            "source_rule_id": "synthetic-source-employees",
+            "field": "employee_count",
+            "minimum": "5",
+            "maximum": "20"
+          },
+          {
+            "operator": "not",
+            "rule_id": "excluded-sector",
+            "source_rule_id": "synthetic-source-exclusion",
+            "rule": {
+              "operator": "equals",
+              "rule_id": "sector-is-excluded",
+              "source_rule_id": "synthetic-source-sector",
+              "field": "sector_code",
+              "value": "SYN-EXCLUDED"
+            }
+          }
+        ]
+      }
+    },
+    "expected": "eligible"
+  },
+  {
+    "name": "unknown synthetic registration",
+    "profile": {"state_code": "SYN-A"},
+    "rule_set": {
+      "scheme_version_id": "synthetic-scheme-v2",
+      "rule_set_version_id": "synthetic-rules-v2",
+      "root": {
+        "operator": "any",
+        "rule_id": "root-any",
+        "source_rule_id": "synthetic-source-any",
+        "rules": [
+          {
+            "operator": "greater_than_or_equal",
+            "rule_id": "age",
+            "source_rule_id": "synthetic-source-age",
+            "field": "years_in_operation",
+            "value": "2"
+          },
+          {
+            "operator": "exists",
+            "rule_id": "registration-known",
+            "source_rule_id": "synthetic-source-registration",
+            "field": "is_registered"
+          }
+        ]
+      }
+    },
+    "expected": "insufficient_information"
+  },
+  {
+    "name": "ineligible synthetic enterprise",
+    "profile": {
+      "state_code": "SYN-C",
+      "annual_turnover": "1500000.50"
+    },
+    "rule_set": {
+      "scheme_version_id": "synthetic-scheme-v3",
+      "rule_set_version_id": "synthetic-rules-v3",
+      "root": {
+        "operator": "all",
+        "rule_id": "root-ineligible",
+        "source_rule_id": "synthetic-source-root-ineligible",
+        "rules": [
+          {
+            "operator": "in",
+            "rule_id": "location-ineligible",
+            "source_rule_id": "synthetic-source-location-ineligible",
+            "field": "state_code",
+            "values": ["SYN-A", "SYN-B"]
+          },
+          {
+            "operator": "less_than_or_equal",
+            "rule_id": "turnover-ineligible",
+            "source_rule_id": "synthetic-source-turnover-ineligible",
+            "field": "annual_turnover",
+            "value": "1000000.25"
+          }
+        ]
+      }
+    },
+    "expected": "ineligible"
+  }
+]

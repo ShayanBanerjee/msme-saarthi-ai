@@ -1,0 +1,89 @@
+"""HTTP integration tests for authorized SSE chat."""
+
+import asyncio
+from collections.abc import Iterator
+from contextlib import contextmanager
+from uuid import UUID
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from app.core.config import Settings
+from app.features.chat.dependencies import require_actor
+from app.features.chat.models import AuthenticatedActor, MessageRole
+from app.features.chat.repository import InMemoryMessageRepository
+from app.main import create_app
+
+ACTOR = AuthenticatedActor(
+    actor_id=UUID("20000000-0000-0000-0000-000000000001"),
+    tenant_id=UUID("30000000-0000-0000-0000-000000000001"),
+)
+CONVERSATION_ID = UUID("10000000-0000-0000-0000-000000000001")
+TEST_ENCRYPTION_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+
+
+def _app() -> FastAPI:
+    return create_app(
+        Settings(
+            environment="test",
+            log_level="CRITICAL",
+            database_url="sqlite+aiosqlite://",
+            data_encryption_key=TEST_ENCRYPTION_KEY,
+            session_cookie_secure=False,
+        )
+    )
+
+
+@contextmanager
+def _authenticated_client(app: FastAPI) -> Iterator[TestClient]:
+    async def actor_override() -> AuthenticatedActor:
+        return ACTOR
+
+    app.dependency_overrides[require_actor] = actor_override
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.integration
+def test_authorized_chat_streams_sse_and_persists_messages() -> None:
+    app = _app()
+    with _authenticated_client(app) as client:
+        with client.stream(
+            "POST",
+            f"/api/v1/chat/conversations/{CONVERSATION_ID}/messages",
+            json={"message": "Explain this synthetic chat demonstration."},
+        ) as response:
+            body = response.read().decode()
+
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/event-stream")
+        assert "event: status" in body
+        assert "event: text_delta" in body
+        assert "event: citation_preview" in body
+        assert "synthetic-citation-001" in body
+        assert "event: final" in body
+
+        repository: InMemoryMessageRepository = app.state.chat_repository
+        messages = asyncio.run(
+            repository.list_for_conversation(
+                tenant_id=ACTOR.tenant_id,
+                actor_id=ACTOR.actor_id,
+                conversation_id=CONVERSATION_ID,
+            )
+        )
+        assert [message.role for message in messages] == [MessageRole.USER, MessageRole.ASSISTANT]
+
+
+@pytest.mark.integration
+def test_unauthorized_chat_is_rejected() -> None:
+    with TestClient(_app()) as client:
+        response = client.post(
+            f"/api/v1/chat/conversations/{CONVERSATION_ID}/messages",
+            json={"message": "This request has no trusted actor."},
+        )
+
+    assert response.status_code == 401
+    assert response.headers["content-type"].startswith("application/problem+json")
+    assert response.json()["code"] == "authentication_required"

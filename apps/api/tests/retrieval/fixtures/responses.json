@@ -1,0 +1,53 @@
+{
+  "lexical": {
+    "hits": {
+      "hits": [
+        {
+          "_id": "fixture-lexical",
+          "_score": 12.0,
+          "_source": {
+            "chunk_id": "fixture-lexical",
+            "chunk_text": "Synthetic lexical fixture content.",
+            "citation_id": "fixture-citation-lexical",
+            "document_id": "fixture-document-lexical",
+            "source_label": "Synthetic OpenSearch fixture",
+            "source_url": "https://example.invalid/retrieval/lexical",
+            "page": 4,
+            "section": "Lexical fixture",
+            "state_codes": ["EXA"],
+            "scheme_status": "published",
+            "language": "en",
+            "valid_from": "2026-01-01",
+            "valid_until": null
+          }
+        }
+      ]
+    }
+  },
+  "vector": {
+    "hits": {
+      "hits": [
+        {
+          "_id": "fixture-vector",
+          "_score": 0.98,
+          "_source": {
+            "chunk_id": "fixture-vector",
+            "chunk_text": "Synthetic semantic fixture content.",
+            "citation_id": "fixture-citation-vector",
+            "document_id": "fixture-document-vector",
+            "source_label": "Synthetic OpenSearch fixture",
+            "source_url": "https://example.invalid/retrieval/vector",
+            "page": 7,
+            "section": "Vector fixture",
+            "state_codes": ["EXA"],
+            "scheme_status": "published",
+            "language": "en",
+            "valid_from": "2026-01-01",
+            "valid_until": null
+          }
+        }
+      ]
+    }
+  }
+}
+
