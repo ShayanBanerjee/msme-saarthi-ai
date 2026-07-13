@@ -1,9 +1,10 @@
-.PHONY: local-bootstrap api-install api-run api-migrate api-migration-check api-lint api-typecheck api-test api-test-integration web-install web-run web-lint web-typecheck web-test web-build infra-up infra-down local-check retrieval-test retrieval-test-integration eligibility-install eligibility-lint eligibility-typecheck eligibility-test
+.PHONY: local-bootstrap api-install api-run api-migrate api-migration-check api-lint api-typecheck api-test api-test-integration web-install web-run web-lint web-typecheck web-test web-build worker-install worker-lint worker-typecheck worker-test ingestion-validate infra-up infra-down local-check retrieval-test retrieval-test-integration eligibility-install eligibility-lint eligibility-typecheck eligibility-test
 
 PYTHON ?= python3
 API_DIR := apps/api
 ELIGIBILITY_DIR := packages/eligibility-engine
 WEB_DIR := apps/web
+WORKER_DIR := apps/worker
 
 local-bootstrap:
 	./scripts/bootstrap-local.sh sqlite
@@ -49,6 +50,21 @@ web-test:
 
 web-build:
 	cd $(WEB_DIR) && npm run build
+
+worker-install:
+	$(PYTHON) -m pip install -e "$(WORKER_DIR)[dev]"
+
+worker-lint:
+	cd $(WORKER_DIR) && $(PYTHON) -m ruff check worker tests
+
+worker-typecheck:
+	cd $(WORKER_DIR) && $(PYTHON) -m mypy worker tests
+
+worker-test:
+	cd $(WORKER_DIR) && $(PYTHON) -m pytest
+
+ingestion-validate:
+	cd $(WORKER_DIR) && $(PYTHON) -m worker.cli sources/official-central.json --validate-only
 
 infra-up:
 	docker compose -f infrastructure/compose.yaml up -d

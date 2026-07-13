@@ -3,6 +3,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 
 from app.core.config import Settings, get_settings
@@ -17,6 +18,8 @@ from app.features.auth.service import AuthService
 from app.features.chat import create_default_chat_service
 from app.features.chat.router import router as chat_router
 from app.features.health.router import router as health_router
+from app.retrieval.embedding import DeterministicHashEmbeddingProvider
+from app.retrieval.opensearch import HttpOpenSearchClient, OpenSearchHybridRetriever
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -25,6 +28,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging(resolved_settings.log_level)
     logger = get_logger(__name__)
     engine = None
+    session_factory = None
+    search_client = None
     auth_service = None
     if resolved_settings.database_url and resolved_settings.data_encryption_key:
         engine, session_factory = create_database(resolved_settings.database_url)
@@ -49,6 +54,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         if engine is not None:
             await engine.dispose()
+        if search_client is not None:
+            await search_client.aclose()
         logger.info("application_stopped")
 
     application = FastAPI(
@@ -60,7 +67,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.settings = resolved_settings
     application.state.auth_service = auth_service
     application.state.database_engine = engine
-    chat_service, chat_repository = create_default_chat_service()
+    retriever = None
+    if resolved_settings.retrieval_provider == "opensearch":
+        search_client = httpx.AsyncClient(timeout=10.0)
+        retriever = OpenSearchHybridRetriever(
+            client=HttpOpenSearchClient(
+                client=search_client,
+                base_url=resolved_settings.opensearch_url,
+            ),
+            embedder=DeterministicHashEmbeddingProvider(),
+            index=resolved_settings.opensearch_index,
+        )
+    chat_service, chat_repository = create_default_chat_service(
+        settings=resolved_settings,
+        session_factory=session_factory,
+        retriever_override=retriever,
+    )
     application.state.chat_service = chat_service
     application.state.chat_repository = chat_repository
     application.add_middleware(

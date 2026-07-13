@@ -6,7 +6,7 @@ import { App } from "./app";
 
 const routes = [
   ["/", "Your ambition deserves a clearer path."],
-  ["/chat", "Ask. Decide. Move."],
+  ["/chat", "Ask. Retrieve. Verify."],
   ["/assessments", "Evidence before answers."],
   ["/schemes", "Find support with evidence."],
   ["/growth", "From idea to momentum."],

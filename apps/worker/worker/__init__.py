@@ -1,0 +1,1 @@
+"""MSME Saarthi ingestion worker."""

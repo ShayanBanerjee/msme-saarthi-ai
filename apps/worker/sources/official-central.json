@@ -1,0 +1,20 @@
+[
+  {
+    "source_id": "msme-pmegp",
+    "label": "Ministry of MSME · PMEGP",
+    "url": "https://pmegp.msme.gov.in/",
+    "allowed_host": "pmegp.msme.gov.in",
+    "valid_from": "2026-07-13",
+    "language": "en",
+    "state_codes": []
+  },
+  {
+    "source_id": "msme-udyam",
+    "label": "Ministry of MSME · Udyam Registration",
+    "url": "https://www.udyamregistration.gov.in/default.aspx",
+    "allowed_host": "www.udyamregistration.gov.in",
+    "valid_from": "2026-07-13",
+    "language": "en",
+    "state_codes": []
+  }
+]

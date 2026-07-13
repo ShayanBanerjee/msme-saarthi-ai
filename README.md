@@ -9,6 +9,8 @@ The language model is not allowed to decide eligibility. Material scheme claims 
 The repository currently provides:
 
 - an animated React 19, TypeScript, Vite, Tailwind CSS and shadcn-style frontend;
+- a public, scheme-first discovery experience with conservative official-source summaries;
+- a 36-jurisdiction State and Union Territory startup-policy atlas sourced from Startup India's June 2026 playbook;
 - self-service registration, login, logout and session restoration;
 - AES-256-GCM encryption for email, personal name, business name and tenant display name;
 - Argon2id password hashing and opaque revocable server-side sessions;
@@ -16,12 +18,18 @@ The repository currently provides:
 - SQLAlchemy 2 persistence with Alembic migrations and PostgreSQL support;
 - a local encrypted SQLite fallback for single-developer preview environments;
 - a FastAPI modular monolith with standardized errors and structured logging;
-- a protected LangGraph chat vertical slice with an application-owned provider interface;
+- a protected, streamed LangGraph RAG assistant with curated official evidence and an optional OpenAI Responses API adapter;
+- PostgreSQL-backed completed chat history in shared-development and production configurations;
+- an allowlisted ingestion worker that extracts untrusted web text, chunks it, derives embeddings and writes a versioned OpenSearch index;
 - an OpenSearch hybrid-retrieval adapter with BM25, vector retrieval and reciprocal-rank fusion;
 - a standalone deterministic eligibility engine; and
 - a curated, date-stamped official-source scheme discovery preview.
 
-This is not yet a production launch. Chat history remains process-local, scheme ingestion is not automated, paid checkout is not active, and Terraform/GitHub Actions deployment automation has not been implemented.
+Public visitors can browse the curated programme library and State/UT source atlas before creating an account. Government information is not paywalled. The planned paid experience is a guided business-to-scheme fit map, comparison workflow and evidence-gap tracker; it is clearly marked as coming soon and no checkout is active.
+
+MSME Saarthi AI is independent and is not a Government of India portal. The product does not display the State Emblem or imply government affiliation. Links labeled as official sources open the responsible authority or an official national source registry; users must confirm current terms and application windows there.
+
+This is not yet a production launch. Source review/publication is operator-controlled, paid checkout is not active, and Terraform/GitHub Actions deployment automation has not been implemented.
 
 ## Repository layout
 
@@ -29,6 +37,7 @@ This is not yet a production launch. Chat history remains process-local, scheme 
 apps/
   api/                      FastAPI modular monolith and Alembic migrations
   web/                      React/Vite frontend
+  worker/                   Allowlisted source extraction and OpenSearch indexing
 packages/
   eligibility-engine/       Pure deterministic rules and evaluation
 infrastructure/
@@ -39,7 +48,7 @@ scripts/
 docs/                       Product, architecture, AI, security and testing contracts
 ```
 
-`apps/worker`, shared generated contracts, Terraform and deployment workflows are planned but not present.
+Shared generated contracts, Terraform and deployment workflows are planned but not present.
 
 ## Architecture at a glance
 
@@ -100,6 +109,18 @@ Start the web application in terminal two:
 ```bash
 make web-run
 ```
+
+### Enable the GPT-backed RAG answer adapter
+
+The default remains deterministic and does not require a provider account. To use OpenAI, create a key at the [OpenAI API key page](https://platform.openai.com/api-keys), set it only in `apps/api/.env`, and restart the API:
+
+```dotenv
+MSME_SAARTHI_LLM_PROVIDER=openai
+MSME_SAARTHI_OPENAI_API_KEY=<set-locally-never-commit>
+MSME_SAARTHI_OPENAI_MODEL=gpt-5.4-mini
+```
+
+The key is server-side only. The browser never receives it. The adapter uses the Responses API behind the application-owned provider interface; retrieved text is delimited as untrusted evidence and the model is prohibited from deciding eligibility.
 
 Open:
 
@@ -186,6 +207,37 @@ cd apps/api
 ```
 
 Review generated migrations manually. Autogeneration does not validate data migration safety, tenant invariants or rollback strategy.
+
+## RAG source ingestion
+
+The worker pipeline is deliberately explicit:
+
+```text
+reviewed allowlist manifest
+  → HTTPS fetch with redirect/host/size controls
+  → visible-text extraction (retrieved instructions ignored)
+  → deterministic chunks + checksums + citation metadata
+  → embedding boundary
+  → versioned OpenSearch evidence index
+  → hybrid retrieval → LangGraph → cited streamed answer
+```
+
+Install and validate the manifest without network or index writes:
+
+```bash
+make worker-install PYTHON="$PWD/.venv/bin/python"
+make ingestion-validate PYTHON="$PWD/.venv/bin/python"
+```
+
+After reviewing the manifest and starting OpenSearch, run ingestion explicitly:
+
+```bash
+cd apps/worker
+../../.venv/bin/python -m worker.cli sources/official-central.json \
+  --opensearch-url http://127.0.0.1:9200
+```
+
+Indexed pages remain untrusted evidence. This command does not create structured eligibility rules or publish an eligibility decision. Production requires immutable object snapshots, malware/content scanning, reviewer approval and durable ingestion-job records before scheduled ingestion is enabled.
 
 ## Authentication and data protection
 

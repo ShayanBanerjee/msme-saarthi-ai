@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ErrorBoundary } from "@/components/feedback/error-boundary";
@@ -7,6 +7,7 @@ import { LoadingScreen } from "@/components/feedback/loading-screen";
 import { AuthProvider } from "@/features/auth/auth-provider";
 import { useAuth } from "@/features/auth/auth-context";
 import AuthPage from "@/features/auth/auth-page";
+import PublicHomePage from "@/features/landing/public-home-page";
 
 import { ApplicationShell } from "./application-shell";
 
@@ -27,8 +28,13 @@ const queryClient = new QueryClient({
 
 function AuthenticatedApplication() {
   const auth = useAuth();
+  const [authMode, setAuthMode] = useState<"register" | "login" | null>(null);
   if (auth.status === "loading") return <LoadingScreen />;
-  if (auth.status === "anonymous") return <AuthPage />;
+  if (auth.status === "anonymous") {
+    return authMode === null
+      ? <PublicHomePage onAuthenticate={setAuthMode} />
+      : <AuthPage initialMode={authMode} onBack={() => setAuthMode(null)} />;
+  }
 
   return (
     <Suspense fallback={<LoadingScreen />}>

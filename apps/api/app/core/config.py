@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = True
     session_idle_minutes: int = Field(default=60, ge=5, le=1_440)
     session_absolute_hours: int = Field(default=24, ge=1, le=168)
+    llm_provider: Literal["mock", "openai"] = "mock"
+    openai_api_key: SecretStr | None = None
+    openai_model: str = Field(default="gpt-5.4-mini", min_length=1, max_length=128)
+    openai_base_url: str = "https://api.openai.com/v1"
+    llm_timeout_seconds: float = Field(default=30.0, ge=1.0, le=120.0)
+    retrieval_provider: Literal["curated", "opensearch"] = "curated"
+    opensearch_url: str = "http://127.0.0.1:9200"
+    opensearch_index: str = Field(default="msme-schemes-v1", pattern=r"^[a-z0-9._-]+$")
 
 
 @lru_cache

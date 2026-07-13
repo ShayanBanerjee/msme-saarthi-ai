@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Check, Eye, EyeOff, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -20,9 +20,9 @@ type AuthValues = z.infer<typeof authSchema>;
 
 const benefits = ["Official scheme intelligence", "A focused founder roadmap", "Deterministic eligibility evidence"] as const;
 
-export default function AuthPage() {
+export default function AuthPage({ initialMode = "register", onBack }: { readonly initialMode?: "register" | "login"; readonly onBack?: () => void }) {
   const auth = useAuth();
-  const [mode, setMode] = useState<"register" | "login">("register");
+  const [mode, setMode] = useState<"register" | "login">(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setError } = useForm<AuthValues>({
@@ -57,7 +57,7 @@ export default function AuthPage() {
       <div className="auth-orbit auth-orbit-one" aria-hidden="true" /><div className="auth-orbit auth-orbit-two" aria-hidden="true" /><div className="metal-noise absolute inset-0 opacity-30" aria-hidden="true" />
       <div className="relative z-10 mx-auto grid min-h-screen max-w-[100rem] lg:grid-cols-[1.15fr_0.85fr]">
         <section className="flex flex-col justify-between px-6 py-7 sm:px-10 lg:px-14 lg:py-12">
-          <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl border border-white/15 bg-white/[0.06] font-display text-2xl italic text-copper">S</span><div><p className="font-display text-xl font-semibold tracking-wide">SAARTHI</p><p className="text-[0.52rem] font-bold tracking-[0.28em] text-white/35 uppercase">MSME intelligence</p></div></div>
+          <div className="flex items-center justify-between gap-4"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl border border-white/15 bg-white/[0.06] font-display text-2xl italic text-copper">S</span><div><p className="font-display text-xl font-semibold tracking-wide">SAARTHI</p><p className="text-[0.52rem] font-bold tracking-[0.28em] text-white/35 uppercase">MSME intelligence</p></div></div>{onBack && <button className="flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-white/55 transition hover:border-copper/35 hover:text-white" onClick={onBack} type="button"><ArrowLeft className="size-3.5" />Explore schemes</button>}</div>
           <div className="my-16 max-w-3xl lg:my-10">
             <span className="metal-chip"><Sparkles className="size-3.5 text-copper" /> Intelligence for builders</span>
             <h1 className="mt-8 font-display text-5xl font-semibold leading-[0.92] tracking-[-0.045em] sm:text-7xl xl:text-[6.4rem]">The future is built by people who <em className="font-normal text-copper">begin.</em></h1>

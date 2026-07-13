@@ -3,12 +3,19 @@
 from collections.abc import AsyncIterator, Awaitable, Callable
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
 from app.agents.chat.graph import ChatGraphRunner
-from app.agents.chat.provider import DeterministicMockProvider
-from app.agents.chat.retrieval import MockRetriever
+from app.agents.chat.provider import DeterministicMockProvider, LLMProvider, OpenAIResponsesProvider
+from app.agents.chat.retrieval import CuratedOfficialRetriever, MockRetriever, Retriever
 from app.agents.chat.state import ChatGraphState
+from app.core.config import Settings
 from app.features.chat.models import AuthenticatedActor, ChatMessage, MessageRole
-from app.features.chat.repository import InMemoryMessageRepository, MessageRepository
+from app.features.chat.repository import (
+    InMemoryMessageRepository,
+    MessageRepository,
+    SqlAlchemyMessageRepository,
+)
 from app.features.chat.schemas import (
     ChatStreamEvent,
     CitationPreviewEvent,
@@ -32,9 +39,16 @@ def _text_chunks(text: str, words_per_chunk: int = 6) -> tuple[str, ...]:
 class ChatService:
     """Persist a user message, run the graph, stream, then persist the assistant message."""
 
-    def __init__(self, *, graph: ChatGraphRunner, repository: MessageRepository) -> None:
+    def __init__(
+        self,
+        *,
+        graph: ChatGraphRunner,
+        repository: MessageRepository,
+        prompt_version: str = "chat.synthetic.v1",
+    ) -> None:
         self._graph = graph
         self._repository = repository
+        self._prompt_version = prompt_version
 
     async def stream_message(
         self,
@@ -64,6 +78,7 @@ class ChatService:
                 tenant_id=actor.tenant_id,
                 correlation_id=correlation_id,
                 user_message=message,
+                prompt_version=self._prompt_version,
             )
         )
         yield StatusEvent(status="generating")
@@ -97,8 +112,32 @@ class ChatService:
         )
 
 
-def create_default_chat_service() -> tuple[ChatService, InMemoryMessageRepository]:
-    """Create the local synthetic slice; production auth remains fail-closed."""
-    repository = InMemoryMessageRepository()
-    graph = ChatGraphRunner(retriever=MockRetriever(), provider=DeterministicMockProvider())
-    return ChatService(graph=graph, repository=repository), repository
+def create_default_chat_service(
+    *,
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession] | None,
+    retriever_override: Retriever | None = None,
+) -> tuple[ChatService, MessageRepository]:
+    """Select explicit local/production adapters from validated configuration."""
+    repository: MessageRepository = (
+        InMemoryMessageRepository()
+        if session_factory is None or settings.environment == "test"
+        else SqlAlchemyMessageRepository(session_factory)
+    )
+    retriever: Retriever = retriever_override or (
+        MockRetriever() if settings.environment == "test" else CuratedOfficialRetriever()
+    )
+    provider: LLMProvider = DeterministicMockProvider()
+    if settings.llm_provider == "openai":
+        if settings.openai_api_key is None:
+            raise ValueError("MSME_SAARTHI_OPENAI_API_KEY is required when llm_provider=openai")
+        provider = OpenAIResponsesProvider(
+            api_key=settings.openai_api_key.get_secret_value(),
+            model=settings.openai_model,
+            base_url=settings.openai_base_url,
+            timeout_seconds=settings.llm_timeout_seconds,
+        )
+    graph = ChatGraphRunner(retriever=retriever, provider=provider)
+    return ChatService(
+        graph=graph, repository=repository, prompt_version="chat.grounded.v1"
+    ), repository
