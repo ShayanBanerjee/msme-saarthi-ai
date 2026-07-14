@@ -17,7 +17,7 @@ const plans = [
     price: "₹999",
     suffix: "/ month",
     note: "For building with momentum",
-    features: ["Everything in Free", "Unlimited guided conversations", "Growth-plan workspace", "Priority scheme alerts", "Exportable action briefs"],
+    features: ["Everything in Free", "Unlimited guided conversations", "Growth-plan workspace", "Priority scheme alerts", "Private-investor discovery and outreach briefs", "Exportable action briefs"],
     action: "Join Pro waitlist",
     featured: true,
   },

@@ -1,14 +1,29 @@
 """Authorized chat use case and streaming persistence lifecycle."""
 
+import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.agents.chat.citation_validation import validate_claim_citations
 from app.agents.chat.graph import ChatGraphRunner
-from app.agents.chat.provider import DeterministicMockProvider, LLMProvider, OpenAIResponsesProvider
+from app.agents.chat.provider import (
+    DeterministicMockProvider,
+    LLMProvider,
+    OpenAIResponsesProvider,
+    ProviderTimeoutError,
+)
 from app.agents.chat.retrieval import CuratedOfficialRetriever, MockRetriever, Retriever
-from app.agents.chat.state import BusinessContext, ChatGraphState, ConversationMessage
+from app.agents.chat.state import (
+    AdvisorMode,
+    BusinessContext,
+    ChatGraphState,
+    ConversationMessage,
+    ResponseDepth,
+    RetrievedEvidence,
+)
 from app.core.config import Settings
 from app.features.chat.models import AuthenticatedActor, ChatMessage, MessageRole
 from app.features.chat.repository import (
@@ -24,17 +39,33 @@ from app.features.chat.schemas import (
     FinalEvent,
     StatusEvent,
     TextDeltaEvent,
+    TextReplaceEvent,
 )
 
 type DisconnectCheck = Callable[[], Awaitable[bool]]
 
 
-def _text_chunks(text: str, words_per_chunk: int = 6) -> tuple[str, ...]:
-    words = text.split()
-    return tuple(
-        " ".join(words[index : index + words_per_chunk])
-        + (" " if index + words_per_chunk < len(words) else "")
-        for index in range(0, len(words), words_per_chunk)
+def _safe_fallback(evidence: tuple[RetrievedEvidence, ...]) -> str:
+    official = tuple(
+        item
+        for item in evidence
+        if getattr(getattr(item, "citation", None), "source_kind", None) == "official_scheme"
+    )
+    if not official:
+        return (
+            "I could not complete a fully validated answer from current evidence. Please share "
+            "your State or Union Territory, sector, business stage, and funding or growth need "
+            "so I can search again."
+        )
+    sources = "\n".join(
+        f"- Review {item.citation.source_label} [{item.citation.citation_id}]"
+        for item in official
+    )
+    return (
+        "I could not complete a fully validated generated answer. These reviewed official "
+        f"sources are the safest next references:\n{sources}\n"
+        "Please verify current terms with the linked authority. I have not made an eligibility "
+        "or approval decision."
     )
 
 
@@ -47,10 +78,12 @@ class ChatService:
         graph: ChatGraphRunner,
         repository: MessageRepository,
         prompt_version: str = "chat.synthetic.v1",
+        generation_timeout_seconds: float = 30.0,
     ) -> None:
         self._graph = graph
         self._repository = repository
         self._prompt_version = prompt_version
+        self._generation_timeout_seconds = generation_timeout_seconds
 
     async def stream_message(
         self,
@@ -61,6 +94,8 @@ class ChatService:
         business_context: BusinessContext,
         correlation_id: UUID,
         is_disconnected: DisconnectCheck,
+        advisor_mode: AdvisorMode = AdvisorMode.BUSINESS_ANALYST,
+        response_depth: ResponseDepth = ResponseDepth.BALANCED,
     ) -> AsyncIterator[ChatStreamEvent]:
         history = await self._repository.list_for_conversation(
             tenant_id=actor.tenant_id,
@@ -86,7 +121,7 @@ class ChatService:
         if await is_disconnected():
             return
 
-        result = await self._graph.run(
+        result = await self._graph.prepare(
             ChatGraphState(
                 conversation_id=conversation_id,
                 actor_id=actor.actor_id,
@@ -94,6 +129,8 @@ class ChatService:
                 correlation_id=correlation_id,
                 user_message=message,
                 business_context=business_context,
+                advisor_mode=advisor_mode,
+                response_depth=response_depth,
                 conversation=visible_history,
                 prompt_version=self._prompt_version,
             )
@@ -104,12 +141,37 @@ class ChatService:
                 return
             yield CitationPreviewEvent(citation=evidence.citation)
 
-        if result.answer is None:
-            raise RuntimeError("chat graph completed without an answer")
-        for chunk in _text_chunks(result.answer):
-            if await is_disconnected():
-                return
-            yield TextDeltaEvent(text=chunk)
+        chunks: list[str] = []
+        fallback_reason: Literal["provider_timeout", "citation_validation_failed"] | None = None
+        try:
+            async with asyncio.timeout(self._generation_timeout_seconds):
+                stream = self._graph.stream_answer(result)
+                try:
+                    async for chunk in stream:
+                        if await is_disconnected():
+                            return
+                        chunks.append(chunk)
+                        yield TextDeltaEvent(text=chunk)
+                finally:
+                    await stream.aclose()
+        except (TimeoutError, ProviderTimeoutError):
+            fallback_reason = "provider_timeout"
+
+        answer = "".join(chunks).strip()
+        validation = validate_claim_citations(answer, result.evidence) if answer else None
+        if fallback_reason is None and (validation is None or not validation.valid):
+            fallback_reason = "citation_validation_failed"
+        if fallback_reason is not None:
+            answer = _safe_fallback(result.evidence)
+            yield TextReplaceEvent(text=answer)
+            citation_ids = tuple(
+                item.citation.citation_id
+                for item in result.evidence
+                if item.citation.source_kind == "official_scheme"
+            )
+        else:
+            assert validation is not None
+            citation_ids = validation.cited_ids
 
         if await is_disconnected():
             return
@@ -118,14 +180,20 @@ class ChatService:
             actor_id=actor.actor_id,
             tenant_id=actor.tenant_id,
             role=MessageRole.ASSISTANT,
-            content=result.answer,
-            citation_ids=tuple(item.citation.citation_id for item in result.evidence),
+            content=answer,
+            citation_ids=citation_ids,
         )
         await self._repository.add(assistant_message)
         yield FinalEvent(
             message_id=assistant_message.id,
-            citations=tuple(item.citation for item in result.evidence),
+            citations=tuple(
+                item.citation
+                for item in result.evidence
+                if item.citation.citation_id in citation_ids
+            ),
             prompt_version=result.prompt_version,
+            completion_status="fallback" if fallback_reason else "validated",
+            fallback_reason=fallback_reason,
         )
 
     async def history(
@@ -148,6 +216,14 @@ class ChatService:
             ),
         )
 
+    async def clear(self, *, actor: AuthenticatedActor, conversation_id: UUID) -> None:
+        """Clear only the authenticated actor's current conversation."""
+        await self._repository.delete_conversation(
+            tenant_id=actor.tenant_id,
+            actor_id=actor.actor_id,
+            conversation_id=conversation_id,
+        )
+
 
 def create_default_chat_service(
     *,
@@ -165,7 +241,7 @@ def create_default_chat_service(
         MockRetriever() if settings.environment == "test" else CuratedOfficialRetriever()
     )
     provider: LLMProvider = DeterministicMockProvider()
-    if settings.llm_provider == "openai":
+    if settings.environment != "test" and settings.llm_provider == "openai":
         if settings.openai_api_key is None:
             raise ValueError("MSME_SAARTHI_OPENAI_API_KEY is required when llm_provider=openai")
         provider = OpenAIResponsesProvider(
@@ -176,5 +252,8 @@ def create_default_chat_service(
         )
     graph = ChatGraphRunner(retriever=retriever, provider=provider)
     return ChatService(
-        graph=graph, repository=repository, prompt_version="chat.advisor.v2"
+        graph=graph,
+        repository=repository,
+        prompt_version="chat.advisor.v4",
+        generation_timeout_seconds=settings.llm_timeout_seconds,
     ), repository

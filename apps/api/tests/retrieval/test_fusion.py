@@ -24,7 +24,7 @@ def test_rrf_combines_ranks_and_deduplicates_source_chunks() -> None:
         rank_constant=60,
     )
 
-    assert [result.source_chunk_id for result in results] == ["shared", "vector", "lexical"]
+    assert [result.source_chunk_id for result in results] == ["shared", "lexical", "vector"]
     assert results[0].lexical_rank == 1
     assert results[0].vector_rank == 2
     assert len({result.source_chunk_id for result in results}) == len(results)
@@ -37,4 +37,3 @@ def test_rrf_rejects_invalid_rank_constant() -> None:
         assert str(error) == "rank_constant must be positive"
     else:
         raise AssertionError("Expected invalid rank constant to fail")
-

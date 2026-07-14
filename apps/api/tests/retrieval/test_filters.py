@@ -15,6 +15,8 @@ def test_all_supported_filters_are_applied_to_both_queries() -> None:
         scheme_status=SchemeStatus.PUBLISHED,
         language=LanguageCode.ENGLISH,
         effective_on=date(2026, 7, 13),
+        captured_after=date(2026, 4, 14),
+        captured_before=date(2026, 7, 13),
         source_kind=SourceKind.OFFICIAL_SCHEME,
     )
 
@@ -28,10 +30,28 @@ def test_all_supported_filters_are_applied_to_both_queries() -> None:
     assert {"term": {"language.keyword": "en"}} in clauses
     assert {"term": {"source_kind.keyword": "official_scheme"}} in clauses
     assert {"range": {"valid_from": {"lte": "2026-07-13"}}} in clauses
+    assert {
+        "range": {"captured_at": {"gte": "2026-04-14", "lte": "2026-07-13"}}
+    } in clauses
     assert lexical["query"] == {
         "bool": {
             "must": [
-                {"match": {"chunk_text": {"query": "synthetic support", "operator": "or"}}}
+                {
+                    "match": {
+                        "chunk_text": {
+                            "query": "synthetic support",
+                            "operator": "or",
+                            "minimum_should_match": "20%",
+                        }
+                    }
+                }
+            ],
+            "should": [
+                {
+                    "match_phrase": {
+                        "chunk_text": {"query": "synthetic support", "boost": 3}
+                    }
+                }
             ],
             "filter": clauses,
         }
@@ -55,6 +75,7 @@ def test_all_supported_filters_are_applied_to_both_queries() -> None:
         ("language", "xx"),
         ("unknown", "value"),
         ("source_kind", "invented"),
+        ("captured_after", "not-a-date"),
     ],
 )
 def test_invalid_filter_values_are_rejected(field: str, value: str) -> None:

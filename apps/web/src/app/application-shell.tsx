@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { useAuth } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils";
 
@@ -11,10 +12,7 @@ import { navigationItems } from "./navigation";
 function Brand() {
   return (
     <NavLink className="group flex items-center gap-3" to="/" aria-label="MSME Saarthi home">
-      <span className="relative grid size-10 place-items-center overflow-hidden rounded-xl border border-white/15 bg-white/[0.07] text-copper shadow-[inset_0_1px_0_rgba(255,255,255,.12)]" aria-hidden="true">
-        <span className="font-display text-2xl font-bold italic">S</span>
-        <span className="absolute inset-x-2 bottom-1 h-px bg-copper/60" />
-      </span>
+      <BrandMark />
       <span><span className="block font-display text-[1.35rem] font-semibold leading-none tracking-wide text-white">SAARTHI</span><span className="mt-1 block text-[0.52rem] font-bold tracking-[0.28em] text-white/35 uppercase">MSME intelligence</span></span>
     </NavLink>
   );

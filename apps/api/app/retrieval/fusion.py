@@ -30,19 +30,23 @@ def reciprocal_rank_fusion(
     vector_hits: tuple[OpenSearchHit, ...],
     limit: int,
     rank_constant: int = 60,
+    lexical_weight: float = 1.6,
+    vector_weight: float = 1.0,
 ) -> tuple[RetrievalResult, ...]:
     """Fuse ranks, deduplicate by source chunk, and use chunk ID as stable tie-breaker."""
     if rank_constant < 1:
         raise ValueError("rank_constant must be positive")
+    if lexical_weight <= 0 or vector_weight <= 0:
+        raise ValueError("fusion weights must be positive")
     fused: dict[str, _FusedHit] = {}
-    for source, hits in (
-        ("lexical", _unique_ranked(lexical_hits)),
-        ("vector", _unique_ranked(vector_hits)),
+    for source, weight, hits in (
+        ("lexical", lexical_weight, _unique_ranked(lexical_hits)),
+        ("vector", vector_weight, _unique_ranked(vector_hits)),
     ):
         for rank, hit in enumerate(hits, start=1):
             chunk_id = hit.source.chunk_id
             item = fused.setdefault(chunk_id, _FusedHit(hit=hit))
-            item.score += 1.0 / (rank_constant + rank)
+            item.score += weight / (rank_constant + rank)
             if source == "lexical":
                 item.lexical_rank = rank
             else:
@@ -70,6 +74,7 @@ def _to_result(item: _FusedHit) -> RetrievalResult:
         language=source.language,
         valid_from=source.valid_from,
         valid_until=source.valid_until,
+        captured_at=source.captured_at,
         source_kind=source.source_kind,
         license_label=source.license_label,
     )

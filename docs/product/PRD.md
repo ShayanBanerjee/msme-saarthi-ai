@@ -1,7 +1,7 @@
 # Product Requirements Document
 
 **Status:** Living product contract; MVP partially implemented
-**Last updated:** 2026-07-13  
+**Last updated:** 2026-07-15
 **Owner:** Product and engineering  
 **Related:** [Architecture overview](../architecture/OVERVIEW.md), [Backlog](../planning/BACKLOG.md)
 
@@ -11,7 +11,7 @@ MSME Saarthi AI helps Indian micro, small, and medium enterprises discover gover
 
 The core product promise is traceability: a user can see which profile facts and versioned rules produced an eligibility result, and which approved source supports every material scheme claim.
 
-The current product implements public scheme discovery, State/UT official-source navigation, self-service accounts and secure sessions, a founder shell, streamed cited chat, OpenSearch retrieval, explicit source ingestion, and the standalone eligibility engine. Saved profile editing, persisted assessments, reviewer administration/publication, audit views, recovery/MFA, payments/referrals, and production deployment remain incomplete. “Pro” is presentation and waitlist positioning only; no paid entitlement or checkout is active.
+The current product implements a curated 17-record central programme catalogue, State/UT official-source navigation, self-service accounts and secure sessions, a founder shell, streamed cited chat with persisted user-controlled conversation clearing and safe terminal stream errors, OpenSearch retrieval, explicit source ingestion, and the standalone eligibility engine. Saved profile editing, persisted assessments, reviewer administration/publication, audit views, recovery/MFA, payments/referrals, and production deployment remain incomplete. “Pro,” including the private-investor discovery preview, is presentation and waitlist positioning only; no paid entitlement, investor introduction, or checkout is active.
 
 ## 2. Problem
 
@@ -62,6 +62,7 @@ Scheme information is fragmented across government websites and documents, can c
 - Filter by supported structured facets such as geography, administering authority, sector, enterprise classification, and benefit type.
 - Show scheme summaries, status, last verified date, official links, and inline citations.
 - Exclude drafts and unapproved sources from public results.
+- Keep private-capital organisations in a separately labelled evidence domain; never present them as government schemes, endorsements, eligibility results, or guaranteed introductions.
 
 ### 5.3 Eligibility assessment
 
@@ -98,6 +99,7 @@ Scheme information is fragmented across government websites and documents, can c
 
 - Give founders an educational, non-predictive roadmap from idea definition through formalisation, funding readiness, and initial market validation.
 - Present Free and proposed Pro capabilities clearly without manufacturing urgency, outcomes, savings, or approval claims.
+- Present private-investor discovery as a later Pro research tool using regulator and organisation-published sources, with no subjective ranking or suitability guarantee.
 - Allow a non-transactional Pro waitlist during MVP validation. Do not collect payment details or grant paid entitlements before the later payment architecture is approved.
 - Keep growth guidance distinct from legal, tax, investment, credit, or application advice.
 

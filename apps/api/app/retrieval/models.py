@@ -1,6 +1,6 @@
 """Validated query, filter, OpenSearch response, and result models."""
 
-from datetime import date
+from datetime import date, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
@@ -31,7 +31,19 @@ class RetrievalFilters(BaseModel):
     scheme_status: SchemeStatus = SchemeStatus.PUBLISHED
     language: LanguageCode | None = None
     effective_on: date | None = None
+    captured_after: date | None = None
+    captured_before: date | None = None
     source_kind: SourceKind | None = None
+
+    @model_validator(mode="after")
+    def valid_capture_window(self) -> "RetrievalFilters":
+        if (
+            self.captured_after is not None
+            and self.captured_before is not None
+            and self.captured_after > self.captured_before
+        ):
+            raise ValueError("captured_after must not follow captured_before")
+        return self
 
     @field_validator("state", mode="before")
     @classmethod
@@ -75,6 +87,7 @@ class OpenSearchDocument(BaseModel):
     language: LanguageCode
     valid_from: date
     valid_until: date | None = None
+    captured_at: datetime | None = None
     source_kind: SourceKind = SourceKind.OFFICIAL_SCHEME
     license_label: str | None = Field(default=None, max_length=100)
 
@@ -129,5 +142,6 @@ class RetrievalResult(BaseModel):
     language: LanguageCode
     valid_from: date
     valid_until: date | None
+    captured_at: datetime | None
     source_kind: SourceKind
     license_label: str | None

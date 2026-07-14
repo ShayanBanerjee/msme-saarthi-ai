@@ -20,11 +20,11 @@ The repository currently provides:
 - SQLAlchemy 2 persistence with Alembic migrations and PostgreSQL support;
 - a local encrypted SQLite fallback for single-developer preview environments;
 - a FastAPI modular monolith with standardized errors and structured logging;
-- a protected, streamed LangGraph RAG assistant with curated official evidence and an optional OpenAI Responses API adapter;
+- a protected, streamed LangGraph RAG assistant with reviewed advisor modes, depth control, curated official evidence and an optional OpenAI Responses API adapter;
 - PostgreSQL-backed completed chat history in shared-development and production configurations;
 - an allowlisted ingestion worker that extracts untrusted web text, chunks it, derives embeddings and writes a versioned OpenSearch index;
 - bounded text-bearing PDF extraction for reviewed government publications and openly licensed business guides;
-- an OpenSearch hybrid-retrieval adapter with BM25, vector retrieval and reciprocal-rank fusion;
+- an OpenSearch hybrid-retrieval adapter with phrase-boosted BM25, vector retrieval, weighted reciprocal-rank fusion and source diversity;
 - a standalone deterministic eligibility engine; and
 - a curated, date-stamped official-source scheme discovery preview.
 
@@ -182,11 +182,16 @@ MSME_SAARTHI_DATA_ENCRYPTION_KEY_VERSION=v1
 MSME_SAARTHI_WEB_ORIGIN=http://127.0.0.1:5173
 MSME_SAARTHI_SESSION_COOKIE_SECURE=false
 MSME_SAARTHI_RETRIEVAL_PROVIDER=opensearch
+MSME_SAARTHI_EMBEDDING_PROVIDER=local
+MSME_SAARTHI_EMBEDDING_MODEL=text-embedding-3-small
+MSME_SAARTHI_EMBEDDING_DIMENSIONS=384
 MSME_SAARTHI_OPENSEARCH_URL=http://127.0.0.1:9200
-MSME_SAARTHI_OPENSEARCH_INDEX=msme-schemes-v1
+MSME_SAARTHI_OPENSEARCH_INDEX=msme-schemes-v2
 ```
 
 Never commit `.env`, database files, session secrets or encryption keys. Local `.env` and runtime database files are ignored by Git.
+
+When the API is launched from `apps/api` (including through `make api-run`), configuration is loaded from the monorepo root `.env` first and `apps/api/.env` second. The API-local file therefore overrides shared development defaults and must retain the authoritative database URL and encryption key. Real model credentials may be set in either ignored file, but production deployments should inject them through the environment or a secrets manager rather than filesystem dotenv files.
 
 ## Database migrations
 
@@ -240,8 +245,25 @@ After reviewing the manifest and starting OpenSearch, run ingestion explicitly:
 ```bash
 cd apps/worker
 ../../.venv/bin/python -m worker.cli sources/official-central.json \
-  --opensearch-url http://127.0.0.1:9200
+  --opensearch-url http://127.0.0.1:9200 \
+  --index msme-schemes-v2 \
+  --embedding-provider local \
+  --embedding-dimensions 384
 ```
+
+The reviewed manifest currently produces 4,382 local chunks across six official government publications/pages and two CC BY business textbooks. The key-free local adapter is a normalized lexical-feature vector, not a substitute for an evaluated semantic model. To create production-quality OpenAI vectors, set `MSME_SAARTHI_OPENAI_API_KEY` only in the server/worker environment and ingest into a new index name:
+
+```bash
+cd apps/worker
+../../.venv/bin/python -m worker.cli sources/official-central.json \
+  --opensearch-url http://127.0.0.1:9200 \
+  --index msme-schemes-openai-v1 \
+  --embedding-provider openai \
+  --embedding-model text-embedding-3-small \
+  --embedding-dimensions 384
+```
+
+Then configure the API with the same embedding provider, model, dimensions, and index name. Never query an index with a different embedding configuration. The OpenAI adapter sends batched text to the provider, so review privacy, retention, region, cost, and source-publication policy before using it outside local evaluation.
 
 Indexed pages remain untrusted evidence. This command does not create structured eligibility rules or publish an eligibility decision. Production requires immutable object snapshots, malware/content scanning, reviewer approval and durable ingestion-job records before scheduled ingestion is enabled.
 

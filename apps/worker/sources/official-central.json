@@ -44,6 +44,138 @@
     "source_kind": "official_scheme"
   },
   {
+    "source_id": "msme-connect-jan-mar-2026",
+    "label": "Ministry of MSME · MSME Connect Jan–Mar 2026",
+    "url": "https://www.msme.gov.in/static/uploads/2026/05/3040dc36fd7023c4d4d1f647ee816165.pdf",
+    "allowed_host": "www.msme.gov.in",
+    "valid_from": "2026-03-31",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "pdf",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "pmfme-scheme-guidelines",
+    "label": "Ministry of Food Processing Industries · PMFME Guidelines",
+    "url": "https://pmfme.mofpi.gov.in/pmfme/newsletters/docs/SchemeGuidelines.pdf",
+    "allowed_host": "pmfme.mofpi.gov.in",
+    "valid_from": "2020-06-22",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "pdf",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "myscheme-discovery-index",
+    "label": "myScheme · National Government Scheme Discovery Platform",
+    "url": "https://www.myscheme.gov.in/",
+    "allowed_host": "www.myscheme.gov.in",
+    "valid_from": "2026-07-15",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "dfs-pmmy",
+    "label": "Department of Financial Services · PMMY",
+    "url": "https://financialservices.gov.in/pradhan-mantri-mudra-yojana-pmmy",
+    "allowed_host": "financialservices.gov.in",
+    "valid_from": "2026-07-15",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "startup-india-sisfs",
+    "label": "DPIIT · Startup India Seed Fund Scheme",
+    "url": "https://seedfund.startupindia.gov.in/",
+    "allowed_host": "seedfund.startupindia.gov.in",
+    "valid_from": "2026-07-15",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "startup-india-cgss-2025",
+    "label": "DPIIT · Credit Guarantee Scheme for Startups Guidelines 2025",
+    "url": "https://www.startupindia.gov.in/content/dam/invest-india/cgss/cgss-guidelines.pdf",
+    "allowed_host": "www.startupindia.gov.in",
+    "valid_from": "2025-05-08",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "pdf",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "dst-nidhi-programmes",
+    "label": "Department of Science and Technology · NIDHI Programmes",
+    "url": "https://nidhi.dst.gov.in/schemes-programmes/",
+    "allowed_host": "nidhi.dst.gov.in",
+    "valid_from": "2026-07-15",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "birac-big",
+    "label": "BIRAC · Biotechnology Ignition Grant",
+    "url": "https://www.birac.nic.in/big.php",
+    "allowed_host": "www.birac.nic.in",
+    "valid_from": "2026-07-15",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "meity-tide-2",
+    "label": "MeitY · TIDE 2.0",
+    "url": "https://www.meity.gov.in/offerings/schemes-and-services/details/technology-incubation-and-development-of-entrepreneurs-QMwEjNtQWa",
+    "allowed_host": "www.meity.gov.in",
+    "valid_from": "2026-07-15",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "meity-samridh",
+    "label": "MeitY Startup Hub · SAMRIDH",
+    "url": "https://msh.meity.gov.in/schemes/samridh",
+    "allowed_host": "msh.meity.gov.in",
+    "valid_from": "2026-07-15",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "msme-aspire",
+    "label": "Ministry of MSME · ASPIRE",
+    "url": "https://www.aspire.msme.gov.in/ASPIRE/AFHome.aspx",
+    "allowed_host": "www.aspire.msme.gov.in",
+    "valid_from": "2026-07-15",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
+    "source_id": "msme-pm-vishwakarma",
+    "label": "Ministry of MSME · PM Vishwakarma",
+    "url": "https://pmvishwakarma.gov.in/",
+    "allowed_host": "pmvishwakarma.gov.in",
+    "valid_from": "2026-07-15",
+    "language": "en",
+    "state_codes": [],
+    "document_type": "html",
+    "source_kind": "official_scheme"
+  },
+  {
     "source_id": "loc-entrepreneurship-open-textbook",
     "label": "Library of Congress · Entrepreneurship",
     "url": "https://tile.loc.gov/storage-services/master/gdc/gdcebookspublic/20/21/38/77/39/2021387739/2021387739.pdf",

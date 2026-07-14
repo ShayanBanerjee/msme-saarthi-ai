@@ -1,4 +1,6 @@
-"""Two-node LangGraph for synthetic retrieval and provider-backed generation."""
+"""Bounded chat graph with retrieval preparation and provider-native streaming."""
+
+from collections.abc import AsyncGenerator
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -41,6 +43,8 @@ class ChatGraphRunner:
                 conversation=state.conversation,
                 evidence=state.evidence,
                 prompt_version=state.prompt_version,
+                advisor_mode=state.advisor_mode,
+                response_depth=state.response_depth,
             )
         )
         return {"answer": response.text}
@@ -49,3 +53,26 @@ class ChatGraphRunner:
         """Run the graph and revalidate all node output at the application boundary."""
         raw_output = await self._graph.ainvoke(state, version="v2")
         return ChatGraphState.model_validate(raw_output.value)
+
+    async def prepare(self, state: ChatGraphState) -> ChatGraphState:
+        """Run retrieval without buffering generation so transport can stream native deltas."""
+        retrieved = await self._retrieve(state)
+        return state.model_copy(update=retrieved)
+
+    async def stream_answer(self, state: ChatGraphState) -> AsyncGenerator[str]:
+        """Stream generation from the configured provider using validated graph state."""
+        request = LLMGenerationRequest(
+            user_message=state.user_message,
+            business_context=state.business_context,
+            conversation=state.conversation,
+            evidence=state.evidence,
+            prompt_version=state.prompt_version,
+            advisor_mode=state.advisor_mode,
+            response_depth=state.response_depth,
+        )
+        stream = self._provider.stream(request)
+        try:
+            async for delta in stream:
+                yield delta
+        finally:
+            await stream.aclose()

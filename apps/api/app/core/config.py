@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     """Environment-backed API settings with safe local defaults."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=("../../.env", ".env"),
         env_file_encoding="utf-8",
         env_prefix="MSME_SAARTHI_",
         extra="ignore",
@@ -38,8 +38,13 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
     llm_timeout_seconds: float = Field(default=30.0, ge=1.0, le=120.0)
     retrieval_provider: Literal["curated", "opensearch"] = "curated"
+    embedding_provider: Literal["local", "openai"] = "local"
+    embedding_model: str = Field(default="text-embedding-3-small", min_length=1, max_length=128)
+    embedding_dimensions: int = Field(default=384, ge=64, le=3_072)
     opensearch_url: str = "http://127.0.0.1:9200"
-    opensearch_index: str = Field(default="msme-schemes-v1", pattern=r"^[a-z0-9._-]+$")
+    opensearch_index: str = Field(default="msme-schemes-v2", pattern=r"^[a-z0-9._-]+$")
+    retrieval_official_max_age_days: int = Field(default=90, ge=1, le=3_650)
+    retrieval_guide_max_age_days: int = Field(default=3_650, ge=1, le=7_300)
 
 
 @lru_cache

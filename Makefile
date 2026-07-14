@@ -1,4 +1,4 @@
-.PHONY: local-bootstrap api-install api-run api-migrate api-migration-check api-lint api-typecheck api-test api-test-integration web-install web-run web-lint web-typecheck web-test web-build worker-install worker-lint worker-typecheck worker-test ingestion-validate infra-up infra-down local-check retrieval-test retrieval-test-integration eligibility-install eligibility-lint eligibility-typecheck eligibility-test
+.PHONY: local-bootstrap api-install api-run api-migrate api-migration-check api-lint api-typecheck api-test api-test-integration web-install web-run web-lint web-typecheck web-test web-test-e2e web-build test-e2e worker-install worker-lint worker-typecheck worker-test ingestion-validate infra-up infra-down local-check retrieval-test retrieval-test-integration eligibility-install eligibility-lint eligibility-typecheck eligibility-test
 
 PYTHON ?= python3
 API_DIR := apps/api
@@ -47,6 +47,11 @@ web-typecheck:
 
 web-test:
 	cd $(WEB_DIR) && npm run test
+
+web-test-e2e:
+	cd $(WEB_DIR) && npm run test:e2e
+
+test-e2e: web-test-e2e
 
 web-build:
 	cd $(WEB_DIR) && npm run build

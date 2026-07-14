@@ -1,7 +1,7 @@
 # LangGraph Orchestration Design
 
 **Status:** Living design; minimal cited-chat graph implemented
-**Last updated:** 2026-07-13  
+**Last updated:** 2026-07-15
 **Related:** [RAG design](RAG_DESIGN.md), [Eligibility engine](ELIGIBILITY_ENGINE.md), [API conventions](../api/API_CONVENTIONS.md)
 
 ## 1. Purpose
@@ -10,9 +10,11 @@ LangGraph coordinates bounded conversational workflows: discovery, cited questio
 
 ### Implementation snapshot
 
-The current graph is intentionally smaller than the target graph below: typed state carries a user-confirmed business brief and up to twelve prior visible messages through `retrieve` and `generate` nodes, then the API streams versioned SSE events and persists the completed user/assistant turn to PostgreSQL. Retrieval is injected behind an interface and answer generation uses an application-owned provider interface with deterministic and OpenAI adapters. The prompt asks focused context questions, separates official programme paths from general growth techniques, and never infers eligibility. Disconnect handling, history authorization, and authenticated access are tested.
+The current graph is intentionally smaller than the target graph below: typed state carries a user-confirmed business brief, one of four allowlisted advisor modes, response depth, and up to twelve prior visible messages. Retrieval prepares validated state, then the API forwards provider-native generation deltas. Retrieval and generation remain injected behind application-owned interfaces. Disconnect closes upstream provider work; a bounded model deadline uses a deterministic fallback. Claim-level citation validation runs before assistant persistence and the authoritative final event. The prompt separates official programme paths from general growth techniques and never infers eligibility.
 
-Intent routing, profile-field collection, deterministic assessment invocation, durable graph checkpoints, prompt-registry persistence, Gemini, and claim-level citation validation are not implemented yet. The fuller graph below remains the target contract.
+The allowlisted modes are `business_analyst`, `scheme_navigator`, `growth_strategist`, and `funding_readiness`; depth is `concise`, `balanced`, or `deep`. Clients select IDs only. They cannot submit system-prompt text. These compile-time prompt fragments are a first prompt-registry boundary, not the durable reviewed prompt-version store described below.
+
+Intent routing, profile-field collection, deterministic assessment invocation, durable graph checkpoints, prompt-registry persistence, and Gemini are not implemented yet. The fuller graph below remains the target contract.
 
 ## 2. MVP graph
 
@@ -113,7 +115,7 @@ The graph never silently infers a missing business fact from conversation or evi
 
 ## 10. Streaming
 
-For assistant text, the API may use SSE with typed events: `status`, `text_delta`, `citation_preview`, `final`, and `error`. Deltas are provisional. The `final` event contains the validated answer, resolved citations, prompt/model metadata allowed by policy, and completion status. The UI must not treat provisional text as an authoritative eligibility result.
+For assistant text, the API uses SSE with typed events: `status`, `text_delta`, `citation_preview`, `text_replace`, `final`, and `error`. Deltas and previews are provisional. `text_replace` atomically retracts provisional text when timeout or citation validation selects a safe fallback. The `final` event contains only authoritative citations plus `completion_status` and an optional stable `fallback_reason`. The UI must not treat provisional text as an authoritative eligibility result.
 
 ## 11. Observability and evaluation
 

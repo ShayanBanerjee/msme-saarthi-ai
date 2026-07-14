@@ -14,7 +14,7 @@ describe("public scheme discovery", () => {
     expect(screen.getByText("Andhra Pradesh")).toBeInTheDocument();
     expect(screen.getByText("West Bengal")).toBeInTheDocument();
     expect(screen.getByText("Delhi")).toBeInTheDocument();
-    expect(screen.getByText("Draft policy")).toBeInTheDocument();
+    expect(screen.getByText(/Draft policy · official entry point/)).toBeInTheDocument();
     expect(jurisdictionSources).toHaveLength(36);
   });
 

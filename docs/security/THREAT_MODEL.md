@@ -64,6 +64,8 @@ The MVP must avoid collecting identity, tax, banking, or application documents. 
 | T-12 | Admin/reviewer privilege abuse | High | Least privilege; MFA; fresh authentication for critical actions; four-eyes review where approved; audit/alerts; session expiry |
 | T-13 | Dependency/CI artifact compromise | High | Locked dependencies; review/automated scanning; protected branches; pinned actions; provenance/SBOM; isolated builds; short-lived cloud federation |
 | T-14 | Resource exhaustion/cost abuse | High | Body/query/token limits; per-actor rate/concurrency quotas; provider budgets; timeouts/circuit breakers; queue backpressure; WAF |
+| T-15 | Provisional streamed text survives failed validation | High | Treat deltas/previews as provisional; validate complete claims before persistence; `text_replace` safe fallback; authoritative final citation set |
+| T-16 | Stale legacy index evidence reaches generation | High | UTC capture timestamp per chunk; effective/publication checks; evidence-class maximum ages; fail closed on missing/future/overdue metadata |
 | T-15 | Backup/replica data exposure or unrecoverable loss | High | Encryption/KMS; access isolation; tested restore; retention; deletion propagation; documented RPO/RTO |
 | T-16 | Audit repudiation or correlation failure | Medium | Trusted server timestamps; actor/resource/outcome/correlation IDs; append-only controls; time synchronization; restricted deletion |
 

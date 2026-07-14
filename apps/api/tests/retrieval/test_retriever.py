@@ -91,12 +91,38 @@ def test_existing_retriever_interface_returns_citation_evidence() -> None:
         )
         compatible_retriever: Retriever = retriever
 
-        evidence = await compatible_retriever.retrieve("synthetic question")
+        evidence = await compatible_retriever.retrieve("synthetic terminology")
 
         assert evidence
         assert evidence[0].citation.document_id
         assert evidence[0].citation.page >= 1
         assert evidence[0].citation.section == "Synthetic section"
         assert evidence[0].citation.source_url.host == "example.invalid"
+
+    asyncio.run(scenario())
+
+
+def test_retrieve_fails_closed_for_stale_or_missing_capture_metadata() -> None:
+    class StaleClient:
+        async def search(self, *, index: str, body: JsonObject) -> JsonObject:
+            del index, body
+            stale = make_hit(
+                chunk_id="stale",
+                text="Synthetic terminology with stale evidence metadata.",
+                score=1,
+            )
+            stale["_source"]["captured_at"] = "2025-01-01T00:00:00Z"  # type: ignore[index]
+            return make_response(stale)
+
+    async def scenario() -> None:
+        retriever = OpenSearchHybridRetriever(
+            client=StaleClient(),
+            embedder=RecordingEmbedder(),
+            index="synthetic-schemes-v1",
+            clock=lambda: date(2026, 7, 13),
+            official_max_age_days=90,
+        )
+
+        assert await retriever.retrieve("synthetic terminology") == ()
 
     asyncio.run(scenario())

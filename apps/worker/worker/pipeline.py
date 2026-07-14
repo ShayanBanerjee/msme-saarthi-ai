@@ -2,14 +2,16 @@
 
 import hashlib
 import ipaddress
+import math
 import re
 import socket
 from collections.abc import Iterable
-from datetime import date
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from html.parser import HTMLParser
 from io import BytesIO
-from typing import Literal
+from itertools import pairwise
+from typing import Literal, Protocol
 from urllib.parse import urlparse
 
 import httpx
@@ -43,6 +45,7 @@ class FetchedSource(BaseModel):
 
     body: bytes
     content_type: str
+    captured_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ExtractedPage(BaseModel):
@@ -69,7 +72,9 @@ class IndexedChunk(BaseModel):
     language: str
     valid_from: date
     valid_until: date | None = None
+    captured_at: datetime
     embedding: tuple[float, ...]
+    embedding_model: str
     content_checksum: str
     source_kind: SourceKind
     license_label: str | None = None
@@ -157,13 +162,106 @@ def chunk_text(text: str, *, words_per_chunk: int = 220, overlap: int = 30) -> t
     )
 
 
-def deterministic_embedding(text: str, *, dimensions: int = 32) -> tuple[float, ...]:
+def deterministic_embedding(text: str, *, dimensions: int = 384) -> tuple[float, ...]:
+    """Match the API's key-free feature embedding for reproducible local indexes."""
+    if not 64 <= dimensions <= 3_072:
+        raise ValueError("embedding dimensions must be between 64 and 3072")
+    canonical_terms = {
+        "funding": "finance",
+        "fund": "finance",
+        "loans": "loan",
+        "credits": "credit",
+        "customers": "customer",
+        "selling": "sales",
+        "marketing": "market",
+        "manufacturer": "manufacturing",
+        "manufacturers": "manufacturing",
+        "factories": "factory",
+        "enterprises": "enterprise",
+        "businesses": "business",
+    }
+    tokens = [
+        canonical_terms.get(token, token)
+        for token in re.findall(r"[a-z0-9]+", text.casefold())
+    ]
+    features: list[tuple[str, float]] = [(token, 1.0) for token in tokens]
+    features.extend((f"{left}::{right}", 1.6) for left, right in pairwise(tokens))
     values = [0.0] * dimensions
-    for token in re.findall(r"[a-z0-9]+", text.casefold()):
-        digest = hashlib.sha256(token.encode()).digest()
-        values[int.from_bytes(digest[:2]) % dimensions] += 1.0 if digest[2] % 2 else -1.0
+    for feature, weight in features:
+        digest = hashlib.sha256(feature.encode()).digest()
+        values[int.from_bytes(digest[:4]) % dimensions] += weight
     magnitude = sum(value * value for value in values) ** 0.5 or 1.0
     return tuple(value / magnitude for value in values)
+
+
+class DocumentEmbeddingProvider(Protocol):
+    dimensions: int
+    model_id: str
+
+    async def embed_documents(self, texts: tuple[str, ...]) -> tuple[tuple[float, ...], ...]:
+        ...
+
+
+class LocalFeatureEmbeddingProvider:
+    model_id = "local-feature-hash-v2"
+
+    def __init__(self, *, dimensions: int = 384) -> None:
+        self.dimensions = dimensions
+
+    async def embed_documents(self, texts: tuple[str, ...]) -> tuple[tuple[float, ...], ...]:
+        return tuple(deterministic_embedding(text, dimensions=self.dimensions) for text in texts)
+
+
+class OpenAIDocumentEmbeddingProvider:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        dimensions: int,
+        base_url: str = "https://api.openai.com/v1",
+        timeout_seconds: float = 60.0,
+        batch_size: int = 64,
+    ) -> None:
+        if not api_key:
+            raise ValueError("OpenAI API key is required")
+        self._api_key = api_key
+        self.model_id = model
+        self.dimensions = dimensions
+        self._base_url = base_url.rstrip("/")
+        self._timeout_seconds = timeout_seconds
+        self._batch_size = batch_size
+
+    async def embed_documents(self, texts: tuple[str, ...]) -> tuple[tuple[float, ...], ...]:
+        vectors: list[tuple[float, ...]] = []
+        async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
+            for start in range(0, len(texts), self._batch_size):
+                batch = texts[start : start + self._batch_size]
+                response = await client.post(
+                    f"{self._base_url}/embeddings",
+                    headers={"Authorization": f"Bearer {self._api_key}"},
+                    json={
+                        "input": list(batch),
+                        "model": self.model_id,
+                        "dimensions": self.dimensions,
+                        "encoding_format": "float",
+                    },
+                )
+                response.raise_for_status()
+                payload = response.json()
+                data = payload.get("data") if isinstance(payload, dict) else None
+                if not isinstance(data, list) or len(data) != len(batch):
+                    raise ValueError("OpenAI embedding response count does not match input")
+                ordered = sorted(data, key=lambda item: item.get("index", -1))
+                for item in ordered:
+                    raw = item.get("embedding") if isinstance(item, dict) else None
+                    if not isinstance(raw, list) or len(raw) != self.dimensions:
+                        raise ValueError("OpenAI embedding response has an invalid dimension")
+                    vector = tuple(float(value) for value in raw)
+                    if any(not math.isfinite(value) for value in vector):
+                        raise ValueError("OpenAI embedding response contains non-finite values")
+                    vectors.append(vector)
+        return tuple(vectors)
 
 
 def _is_public_host(host: str) -> bool:
@@ -214,9 +312,12 @@ class HttpSourceFetcher:
 
 
 class OpenSearchChunkSink:
-    def __init__(self, *, base_url: str, index: str = "msme-schemes-v1") -> None:
+    def __init__(
+        self, *, base_url: str, index: str = "msme-schemes-v2", embedding_dimensions: int = 384
+    ) -> None:
         self._base_url = base_url.rstrip("/")
         self._index = index
+        self._embedding_dimensions = embedding_dimensions
 
     async def index(self, chunks: Iterable[IndexedChunk]) -> int:
         count = 0
@@ -227,13 +328,18 @@ class OpenSearchChunkSink:
                     "settings": {"index.knn": True},
                     "mappings": {
                         "properties": {
-                            "embedding": {"type": "knn_vector", "dimension": 32},
+                            "embedding": {
+                                "type": "knn_vector",
+                                "dimension": self._embedding_dimensions,
+                            },
+                            "embedding_model": {"type": "keyword"},
                             "chunk_text": {"type": "text"},
                             "source_kind": {
                                 "type": "text",
                                 "fields": {"keyword": {"type": "keyword"}},
                             },
                             "license_label": {"type": "keyword"},
+                            "captured_at": {"type": "date"},
                         }
                     },
                 },
@@ -249,34 +355,49 @@ class OpenSearchChunkSink:
 
 
 async def ingest_source(
-    source: SourceSpec, *, fetcher: HttpSourceFetcher, sink: OpenSearchChunkSink
+    source: SourceSpec,
+    *,
+    fetcher: HttpSourceFetcher,
+    sink: OpenSearchChunkSink,
+    embedder: DocumentEmbeddingProvider | None = None,
 ) -> int:
     """Fetch one allowlisted source and index derived untrusted text as evidence only."""
     fetched = await fetcher.fetch(source)
     pages = extract_pages(source, fetched)
     checksum = hashlib.sha256(fetched.body).hexdigest()
-    chunks: list[IndexedChunk] = []
+    resolved_embedder = embedder or LocalFeatureEmbeddingProvider()
+    pending: list[tuple[int, ExtractedPage, str]] = []
     index = 0
     for page in pages:
         for content in chunk_text(page.text):
             index += 1
-            chunks.append(
-                IndexedChunk(
-                    chunk_id=f"{source.source_id}-{index:04d}",
-                    chunk_text=content,
-                    citation_id=f"{source.source_id}-{index:04d}",
-                    document_id=source.source_id,
-                    source_label=source.label,
-                    source_url=source.url,
-                    page=page.page,
-                    section=page.section,
-                    state_codes=source.state_codes,
-                    language=source.language,
-                    valid_from=source.valid_from,
-                    embedding=deterministic_embedding(content),
-                    content_checksum=checksum,
-                    source_kind=source.source_kind,
-                    license_label=source.license_label,
-                )
+            pending.append((index, page, content))
+    embeddings = await resolved_embedder.embed_documents(
+        tuple(content for _, _, content in pending)
+    )
+    if len(embeddings) != len(pending):
+        raise ValueError("embedding count does not match chunk count")
+    chunks: list[IndexedChunk] = []
+    for (index, page, content), embedding in zip(pending, embeddings, strict=True):
+        chunks.append(
+            IndexedChunk(
+                chunk_id=f"{source.source_id}-{index:04d}",
+                chunk_text=content,
+                citation_id=f"{source.source_id}-{index:04d}",
+                document_id=source.source_id,
+                source_label=source.label,
+                source_url=source.url,
+                page=page.page,
+                section=page.section,
+                state_codes=source.state_codes,
+                language=source.language,
+                valid_from=source.valid_from,
+                captured_at=fetched.captured_at,
+                embedding=embedding,
+                embedding_model=resolved_embedder.model_id,
+                content_checksum=checksum,
+                source_kind=source.source_kind,
+                license_label=source.license_label,
             )
+        )
     return await sink.index(chunks)
