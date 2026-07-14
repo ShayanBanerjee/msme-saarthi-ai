@@ -17,8 +17,8 @@ export interface NavigationItem {
 }
 
 export const navigationItems: readonly NavigationItem[] = [
-  { label: "Overview", path: "/", icon: LayoutDashboard },
   { label: "Saarthi AI", path: "/chat", icon: MessageCircleMore },
+  { label: "Overview", path: "/", icon: LayoutDashboard },
   { label: "Schemes", path: "/schemes", icon: ScrollText },
   { label: "Growth plan", path: "/growth", icon: ChartNoAxesCombined },
   { label: "Venture studio", path: "/studio", icon: DraftingCompass },

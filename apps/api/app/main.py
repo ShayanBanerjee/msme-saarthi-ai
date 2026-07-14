@@ -18,7 +18,11 @@ from app.features.auth.service import AuthService
 from app.features.chat import create_default_chat_service
 from app.features.chat.router import router as chat_router
 from app.features.health.router import router as health_router
-from app.retrieval.embedding import DeterministicHashEmbeddingProvider
+from app.retrieval.embedding import (
+    EmbeddingProvider,
+    LocalFeatureEmbeddingProvider,
+    OpenAIEmbeddingProvider,
+)
 from app.retrieval.opensearch import HttpOpenSearchClient, OpenSearchHybridRetriever
 
 
@@ -73,13 +77,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         and resolved_settings.retrieval_provider == "opensearch"
     ):
         search_client = httpx.AsyncClient(timeout=10.0)
+        embedder: EmbeddingProvider = LocalFeatureEmbeddingProvider(
+            dimensions=resolved_settings.embedding_dimensions
+        )
+        if resolved_settings.embedding_provider == "openai":
+            if resolved_settings.openai_api_key is None:
+                raise ValueError(
+                    "MSME_SAARTHI_OPENAI_API_KEY is required when embedding_provider=openai"
+                )
+            embedder = OpenAIEmbeddingProvider(
+                api_key=resolved_settings.openai_api_key.get_secret_value(),
+                model=resolved_settings.embedding_model,
+                dimensions=resolved_settings.embedding_dimensions,
+                base_url=resolved_settings.openai_base_url,
+                timeout_seconds=resolved_settings.llm_timeout_seconds,
+            )
         retriever = OpenSearchHybridRetriever(
             client=HttpOpenSearchClient(
                 client=search_client,
                 base_url=resolved_settings.opensearch_url,
             ),
-            embedder=DeterministicHashEmbeddingProvider(),
+            embedder=embedder,
             index=resolved_settings.opensearch_index,
+            official_max_age_days=resolved_settings.retrieval_official_max_age_days,
+            guide_max_age_days=resolved_settings.retrieval_guide_max_age_days,
         )
     chat_service, chat_repository = create_default_chat_service(
         settings=resolved_settings,

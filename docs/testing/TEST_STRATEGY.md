@@ -1,7 +1,7 @@
 # Test Strategy
 
-**Status:** Living strategy; module gates implemented, CI/E2E expansion pending
-**Last updated:** 2026-07-13  
+**Status:** Living strategy; module gates and cited-chat browser coverage implemented, broader CI/E2E expansion pending
+**Last updated:** 2026-07-15
 **Related:** [Product requirements](../product/PRD.md), [Threat model](../security/THREAT_MODEL.md)
 
 ## 1. Goals
@@ -38,6 +38,7 @@ Prefer the narrowest deterministic test. Mock third-party networks in normal CI;
 - Mock API boundaries with contract-shaped responses, not internal component behavior.
 - Playwright covers login/session expiry, profile, discovery, cited chat, assessment, and admin access denial.
 - Build and browser checks fail on unexpected console errors.
+- The cited-chat browser suite uses contract-shaped route fixtures to cover prompt selection, Enter submission, multiple SSE text deltas, citation rendering, and the mobile composer without requiring live infrastructure.
 
 ## 5. Eligibility assurance
 
@@ -106,9 +107,10 @@ make worker-lint worker-typecheck worker-test
 make retrieval-test retrieval-test-integration
 make eligibility-lint eligibility-typecheck eligibility-test
 make api-migration-check
+make web-test-e2e
 ```
 
-These module targets are the current verification interface. Root aggregate gates, Playwright coverage, disposable PostgreSQL integration fixtures, evaluation thresholds, security scanning, and GitHub Actions remain planned. Commands must be local/CI equivalent, documented, and never reported as passing unless executed.
+These module targets are the current verification interface. `make test-e2e` currently aliases the web Playwright suite. Broader cross-service Playwright coverage, root aggregate gates, disposable PostgreSQL integration fixtures, evaluation thresholds, security scanning, and GitHub Actions remain planned. Commands must be local/CI equivalent, documented, and never reported as passing unless executed.
 
 ## 12. Exit reporting
 

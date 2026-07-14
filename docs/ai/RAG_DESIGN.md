@@ -1,7 +1,7 @@
 # Retrieval-Augmented Generation Design
 
 **Status:** Living design; hybrid retrieval and explicit ingestion slice implemented
-**Last updated:** 2026-07-13  
+**Last updated:** 2026-07-15
 **Related:** [Eligibility engine](ELIGIBILITY_ENGINE.md), [LangGraph design](LANGGRAPH_DESIGN.md), [ADR-0004](../architecture/adr/0004-opensearch-hybrid-retrieval.md)
 
 ## 1. Purpose and boundary
@@ -12,9 +12,13 @@ All retrieved content is untrusted input. It may contain errors, stale statement
 
 ### Implementation snapshot
 
-The API can select either a curated development retriever or the OpenSearch hybrid retriever. The latter runs BM25 and vector queries, applies validated filters, fuses rankings with reciprocal-rank fusion, deduplicates chunks, and retains citation metadata. The worker reads a reviewed allowlist manifest, applies HTTPS/redirect/host/streaming-size controls, extracts visible HTML or bounded text-bearing PDF pages, creates deterministic chunks and hash-derived development embeddings, and writes the versioned index. Evidence is typed as `official_scheme` or `business_guide`; only the former may support material scheme claims. The answer provider is deterministic by default with an optional OpenAI adapter.
+The API can select either a curated development retriever or the OpenSearch hybrid retriever. The latter runs phrase-boosted BM25 and vector queries, applies validated filters, gives lexical evidence a conservative fusion weight, deduplicates chunks, limits source crowding, and retains citation metadata. Before evidence reaches generation, retrieval fails closed for missing capture timestamps, non-published/ineffective versions, future captures, and sources older than the configured evidence-class age. The worker records a UTC `captured_at` value on every indexed chunk. Evidence is typed as `official_scheme` or `business_guide`; only the former may support material scheme claims.
 
-The reviewed local manifest currently contains four official government sources and two CC BY business textbooks fetched from the Library of Congress. It is documented in `apps/worker/sources/README.md`. This slice does not yet provide immutable raw-content object snapshots, PostgreSQL-backed ingestion/publication jobs, reviewer approval UI, a production embedding provider, scheduled refresh, or the claim-level citation validator described below. Those remain launch gates, not implied current behavior.
+The answer provider is deterministic by default with an optional OpenAI Responses adapter. The OpenAI adapter consumes provider-native semantic SSE events and forwards text deltas without first buffering the complete response. Cancellation closes both graph and provider generators. A total generation deadline converts timeout into a deterministic source-list fallback. Streamed text remains provisional: claim validation runs before persistence and the authoritative `final` event. Unsupported output is replaced using `text_replace`, and only citations actually used by the validated answer are attached.
+
+The reviewed local manifest currently contains six official government sources and two CC BY business textbooks fetched from the Library of Congress. It is documented in `apps/worker/sources/README.md`. A complete local run created 4,382 chunks in `msme-schemes-v2`. Key-free development uses a 384-dimensional normalized token/bigram feature vector; production can select the OpenAI embeddings adapter and an explicitly dimensioned, separate index. The query and ingestion adapters must always use the same provider, model, dimensions, and index version.
+
+This slice does not yet provide immutable raw-content object snapshots, PostgreSQL-backed ingestion/publication jobs, reviewer approval UI, scheduled refresh, or production relevance/entailment evaluation. The implemented deterministic claim validator is a launch safeguard, but it does not replace corpus-based semantic entailment evaluation or human source review.
 
 ## 2. MVP versus later phases
 
@@ -52,6 +56,10 @@ OpenSearch retrieval              Deterministic eligibility engine
 ### Admission
 
 An administrator/reviewer records canonical URL, authority, source type, domain, language, fetch policy, and approval status. Publishing requires an approved source. The fetcher enforces scheme (`https` in production), allowlisted host, DNS/IP checks, redirect revalidation, content type, response size, timeout, and rate limits to reduce SSRF and resource-exhaustion risk.
+
+myScheme is registered as an approved discovery index, not as the final authority for scheme rules. Candidate records discovered there must resolve to the responsible ministry, department, notification, or current guidelines before material claims or deterministic rules can be published. Bulk crawling remains disabled until robots behavior, rate limits, stable endpoints, refresh policy, and operator approval are documented.
+
+Private-investor records are outside the government-scheme retrieval domain. A later Pro index must use a distinct `private_investor` evidence class, regulator verification where available, and organisation-published sources; it must never influence deterministic scheme eligibility or imply endorsement, ranking, investment appetite, or guaranteed introductions.
 
 ### Pipeline
 
@@ -91,6 +99,7 @@ OpenSearch performs lexical BM25 and approximate vector search. The service, not
 5. Apply diversity limits so one source/version does not crowd out alternatives.
 6. Optionally rerank with a provider-neutral adapter only if enabled and evaluated; reranking cannot bypass filters.
 7. Apply relevance/evidence thresholds and return no-answer when support is insufficient.
+8. Reject candidates whose capture age, publication status, or effective interval cannot prove currentness.
 
 The query builder never accepts raw OpenSearch DSL from users or models. Effective-date behavior is explicit: default to current published versions; historical queries must opt into an as-of date and return version dates visibly.
 
@@ -111,12 +120,13 @@ Provider-neutral OpenAI and Gemini adapters share typed interfaces for generatio
 
 ## 8. Claim and citation validation
 
-Generation returns a structured response containing answer segments and citation IDs. The validator:
+Generation streams provisional text and citation IDs. Before persistence/finalization, the validator:
 
 - rejects unknown, duplicate-forged, draft, withdrawn, or unauthorized citation IDs;
 - requires citations on eligibility criteria, benefits, dates, scope, documents, and application steps;
 - checks that cited versions match the scheme/as-of context;
-- applies a bounded entailment/lexical check as a signal, never as sole publication approval;
+- requires a citation on the same claim, meaningful lexical overlap, and exact support for numeric values;
+- rejects model-authored eligibility assertions regardless of citation;
 - converts unsupported material output to a safe insufficient-evidence response;
 - returns citations as separate safe UI objects rather than trusting model-formatted links.
 
@@ -124,7 +134,8 @@ For eligibility explanations, factual outcomes and missing fields come exclusive
 
 ## 9. Freshness, conflict, and withdrawal
 
-- Source schedules reflect expected update frequency and respectful fetch limits.
+- Source schedules reflect expected update frequency and respectful fetch limits. Current defaults allow official evidence up to 90 days old and business guides up to 3,650 days old; deployments may tighten these validated settings.
+- Missing/future/overdue `captured_at` metadata fails closed at retrieval. Reindexing is required when adding this field to a legacy index.
 - Checksum changes create new source versions and review tasks; they do not overwrite evidence.
 - Scheme versions preserve `valid_from`, `valid_until`, publication, review, and source capture dates.
 - Conflicting approved sources are retained, surfaced to reviewers, and not synthesized into a new rule automatically.

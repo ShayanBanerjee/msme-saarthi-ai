@@ -17,6 +17,7 @@ SOURCE_FIELDS = [
     "language",
     "valid_from",
     "valid_until",
+    "captured_at",
     "source_kind",
     "license_label",
 ]
@@ -49,6 +50,13 @@ def build_filter_clauses(filters: RetrievalFilters) -> list[JsonObject]:
                 },
             ]
         )
+    if filters.captured_after is not None or filters.captured_before is not None:
+        capture_range: JsonObject = {}
+        if filters.captured_after is not None:
+            capture_range["gte"] = filters.captured_after.isoformat()
+        if filters.captured_before is not None:
+            capture_range["lte"] = filters.captured_before.isoformat()
+        clauses.append({"range": {"captured_at": capture_range}})
     return clauses
 
 
@@ -58,7 +66,18 @@ def build_bm25_query(*, query: str, filters: RetrievalFilters, candidates: int) 
         "_source": SOURCE_FIELDS,
         "query": {
             "bool": {
-                "must": [{"match": {"chunk_text": {"query": query, "operator": "or"}}}],
+                "must": [
+                    {
+                        "match": {
+                            "chunk_text": {
+                                "query": query,
+                                "operator": "or",
+                                "minimum_should_match": "20%",
+                            }
+                        }
+                    }
+                ],
+                "should": [{"match_phrase": {"chunk_text": {"query": query, "boost": 3}}}],
                 "filter": build_filter_clauses(filters),
             }
         },

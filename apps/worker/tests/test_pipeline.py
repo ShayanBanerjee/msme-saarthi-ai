@@ -26,7 +26,7 @@ def test_chunking_is_deterministic() -> None:
     assert chunk_text(text, words_per_chunk=30, overlap=5) == chunk_text(
         text, words_per_chunk=30, overlap=5
     )
-    assert len(deterministic_embedding(text)) == 32
+    assert len(deterministic_embedding(text)) == 384
 
 
 def test_source_requires_allowlist_metadata() -> None:

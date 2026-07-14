@@ -5,7 +5,7 @@ from collections import defaultdict
 from typing import Protocol
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.features.chat.models import ChatMessage, ChatMessageRecord, MessageRole
@@ -22,6 +22,12 @@ class MessageRepository(Protocol):
         self, *, tenant_id: UUID, actor_id: UUID, conversation_id: UUID
     ) -> tuple[ChatMessage, ...]:
         """List messages within the authorized tenant/actor boundary."""
+        ...
+
+    async def delete_conversation(
+        self, *, tenant_id: UUID, actor_id: UUID, conversation_id: UUID
+    ) -> None:
+        """Delete messages only within the authorized tenant/actor boundary."""
         ...
 
 
@@ -43,6 +49,13 @@ class InMemoryMessageRepository:
         key = (tenant_id, actor_id, conversation_id)
         async with self._lock:
             return tuple(self._messages[key])
+
+    async def delete_conversation(
+        self, *, tenant_id: UUID, actor_id: UUID, conversation_id: UUID
+    ) -> None:
+        key = (tenant_id, actor_id, conversation_id)
+        async with self._lock:
+            self._messages.pop(key, None)
 
 
 class SqlAlchemyMessageRepository:
@@ -93,3 +106,14 @@ class SqlAlchemyMessageRepository:
             )
             for item in records
         )
+
+    async def delete_conversation(
+        self, *, tenant_id: UUID, actor_id: UUID, conversation_id: UUID
+    ) -> None:
+        statement = delete(ChatMessageRecord).where(
+            ChatMessageRecord.tenant_id == tenant_id,
+            ChatMessageRecord.actor_id == actor_id,
+            ChatMessageRecord.conversation_id == conversation_id,
+        )
+        async with self._session_factory() as session, session.begin():
+            await session.execute(statement)

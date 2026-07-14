@@ -1,7 +1,7 @@
 # API Conventions
 
-**Status:** Living contract; authentication, health, and chat endpoints implemented
-**Last updated:** 2026-07-13  
+**Status:** Living contract; authentication, health, chat streaming/history, and conversation clearing implemented
+**Last updated:** 2026-07-15
 **Base path:** `/api/v1`  
 **Related:** [Data model](../architecture/DATA_MODEL.md), [Threat model](../security/THREAT_MODEL.md)
 
@@ -33,7 +33,9 @@
 - Return `404` rather than confirming existence when a resource belongs to another tenant.
 - Email verification, password recovery, throttling, MFA, and optional OIDC federation are production launch work; adding them must preserve the service-boundary actor contract.
 
-Implemented endpoints are registration, login, current-session lookup, logout, liveness, readiness, authenticated conversation-history reads, and authenticated SSE chat. Chat requests may include a bounded user-confirmed business brief (`stage`, `goal`, `location`, and `sector`); it focuses retrieval and generation but is not an eligibility profile or engine input. Other resources in this contract describe the intended versioned API and must not be presented as currently available.
+Implemented endpoints are registration, login, current-session lookup, logout, liveness, readiness, authenticated conversation-history reads, actor-scoped conversation clearing (`DELETE /api/v1/chat/conversations/{conversation_id}/messages`), and authenticated SSE chat. Chat requests may include a bounded user-confirmed business brief (`stage`, `goal`, `location`, and `sector`), an allowlisted `advisor_mode`, and an allowlisted `response_depth`. These focus retrieval and generation but are not an eligibility profile or engine input. Arbitrary system prompts are rejected by schema design. Other resources in this contract describe the intended versioned API and must not be presented as currently available.
+
+Chat SSE uses typed `status`, `citation_preview`, provider-native `text_delta`, `text_replace`, `final`, and terminal `error` events. Text and citation previews remain provisional until `final`. `text_replace` retracts provisional model output after a timeout or claim-validation failure. `final.citations` is the authoritative, claim-matched set; `completion_status` is `validated` or `fallback`, with an optional stable `fallback_reason`. Other post-start failures emit a safe error code without provider diagnostics.
 
 ## 4. Success responses
 
@@ -141,7 +143,7 @@ Eligibility endpoints invoke only the deterministic engine. A completed assessme
 - Assistant responses use structured claim markers that resolve to citations returned in the same response.
 - A material claim without resolvable support is removed, qualified as unsupported, or causes a safe fallback.
 - Retrieved text and user content are untrusted data. APIs never return hidden prompts, reasoning, or internal safety policies.
-- Streaming uses Server-Sent Events for one-way assistant output unless an ADR selects another protocol. Event schemas are versioned; a final event contains authoritative citations and completion status.
+- Streaming uses Server-Sent Events for one-way assistant output. Cancellation closes upstream generation. Event schemas are versioned; clients append `text_delta`, atomically replace visible text on `text_replace`, and treat only `final` citations/completion status as authoritative.
 
 ## 10. Asynchronous jobs
 

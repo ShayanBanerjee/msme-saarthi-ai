@@ -15,6 +15,9 @@ export interface BusinessContext {
   readonly sector?: string;
 }
 
+export type AdvisorMode = "business_analyst" | "scheme_navigator" | "growth_strategist" | "funding_readiness";
+export type ResponseDepth = "concise" | "balanced" | "deep";
+
 export interface ChatHistoryItem {
   readonly role: "user" | "assistant";
   readonly content: string;
@@ -24,7 +27,9 @@ export interface ChatHistoryItem {
 export interface ChatCallbacks {
   readonly onStatus: (status: "understanding" | "retrieving" | "generating") => void;
   readonly onText: (text: string) => void;
+  readonly onReplace: (text: string) => void;
   readonly onCitation: (citation: ChatCitation) => void;
+  readonly onFinalCitations: (citations: readonly ChatCitation[]) => void;
 }
 
 export class ChatApiError extends Error {}
@@ -38,10 +43,20 @@ export async function getChatHistory(conversationId: string): Promise<readonly C
   return payload.items;
 }
 
+export async function clearChatHistory(conversationId: string): Promise<void> {
+  const response = await fetch(`/api/v1/chat/conversations/${conversationId}/messages`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) throw new ChatApiError("Saarthi could not clear this conversation.");
+}
+
 export async function streamChatMessage(
   conversationId: string,
   message: string,
   businessContext: BusinessContext,
+  advisorMode: AdvisorMode,
+  responseDepth: ResponseDepth,
   callbacks: ChatCallbacks,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -49,7 +64,12 @@ export async function streamChatMessage(
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, business_context: businessContext }),
+    body: JSON.stringify({
+      message,
+      business_context: businessContext,
+      advisor_mode: advisorMode,
+      response_depth: responseDepth,
+    }),
     signal,
   });
   if (!response.ok || !response.body) {
@@ -59,9 +79,11 @@ export async function streamChatMessage(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let receivedFinal = false;
   while (true) {
     const { value, done } = await reader.read();
-    buffer += decoder.decode(value, { stream: !done });
+    buffer += decoder.decode(value, { stream: !done }).replaceAll("\r\n", "\n");
+    if (done && buffer.trim()) buffer += "\n\n";
     const frames = buffer.split("\n\n");
     buffer = frames.pop() ?? "";
     for (const frame of frames) {
@@ -71,8 +93,15 @@ export async function streamChatMessage(
       const payload = JSON.parse(data) as Record<string, unknown>;
       if (event === "status" && (payload.status === "understanding" || payload.status === "retrieving" || payload.status === "generating")) callbacks.onStatus(payload.status);
       if (event === "text_delta" && typeof payload.text === "string") callbacks.onText(payload.text);
+      if (event === "text_replace" && typeof payload.text === "string") callbacks.onReplace(payload.text);
       if (event === "citation_preview") callbacks.onCitation(payload.citation as ChatCitation);
+      if (event === "error") throw new ChatApiError(typeof payload.message === "string" ? payload.message : "Saarthi could not complete this answer.");
+      if (event === "final") {
+        callbacks.onFinalCitations(Array.isArray(payload.citations) ? payload.citations as ChatCitation[] : []);
+        receivedFinal = true;
+      }
     }
     if (done) break;
   }
+  if (!receivedFinal) throw new ChatApiError("The answer stream ended before it was complete. Please retry.");
 }

@@ -38,6 +38,19 @@ class BusinessGoal(StrEnum):
     IMPROVE = "improve"
 
 
+class AdvisorMode(StrEnum):
+    BUSINESS_ANALYST = "business_analyst"
+    SCHEME_NAVIGATOR = "scheme_navigator"
+    GROWTH_STRATEGIST = "growth_strategist"
+    FUNDING_READINESS = "funding_readiness"
+
+
+class ResponseDepth(StrEnum):
+    CONCISE = "concise"
+    BALANCED = "balanced"
+    DEEP = "deep"
+
+
 class BusinessContext(BaseModel):
     """Small user-confirmed brief used to focus retrieval and advice."""
 
@@ -49,8 +62,20 @@ class BusinessContext(BaseModel):
     sector: str | None = Field(default=None, min_length=2, max_length=120)
 
     def retrieval_text(self) -> str:
-        values = (self.stage, self.goal, self.location, self.sector)
-        return " ".join(str(value) for value in values if value is not None)
+        goal_terms = {
+            BusinessGoal.START: "new enterprise entrepreneurship setup registration",
+            BusinessGoal.FUND: "finance credit working capital loan guarantee subsidy grant",
+            BusinessGoal.SELL: "market access procurement export customers marketing sales",
+            BusinessGoal.FORMALISE: "Udyam registration compliance formalisation",
+            BusinessGoal.IMPROVE: "productivity technology quality lean operations",
+        }
+        values = (
+            self.stage.value if self.stage else None,
+            goal_terms.get(self.goal) if self.goal else None,
+            self.location,
+            self.sector,
+        )
+        return " ".join(value for value in values if value)
 
 
 class ConversationMessage(BaseModel):
@@ -82,6 +107,8 @@ class ChatGraphState(BaseModel):
     correlation_id: UUID
     user_message: str = Field(min_length=1, max_length=4_000)
     prompt_version: str = Field(default="chat.synthetic.v1", min_length=1, max_length=128)
+    advisor_mode: AdvisorMode = AdvisorMode.BUSINESS_ANALYST
+    response_depth: ResponseDepth = ResponseDepth.BALANCED
     business_context: BusinessContext = Field(default_factory=BusinessContext)
     conversation: tuple[ConversationMessage, ...] = Field(default=(), max_length=12)
     evidence: tuple[RetrievedEvidence, ...] = ()
