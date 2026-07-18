@@ -5,9 +5,17 @@
 The OpenSearch bootstrap password exists only because the upstream image requires one during startup. Security is disabled for this loopback-only development container; production must enable authentication, TLS and managed-secret delivery.
 
 ```bash
+make start
+make status
+make logs
+make stop
+
+# Infrastructure only
 make infra-up
 make infra-down
 ```
+
+The top-level lifecycle commands provide a platform-neutral local supervisor for Compose, migrations, FastAPI and Vite. They use repository-local PID and log files and do not depend on macOS launch tools. The infrastructure-only targets remain useful when running application processes manually.
 
 Identity, encrypted profiles, secure sessions and completed chat turns use PostgreSQL through SQLAlchemy and Alembic. Redis remains an ephemeral coordination boundary. OpenSearch is a derived evidence index populated by the explicit worker ingestion command; it is never the eligibility or publication authority.
 

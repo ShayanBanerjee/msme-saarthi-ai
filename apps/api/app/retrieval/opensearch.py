@@ -54,6 +54,10 @@ class OpenSearchHybridRetriever:
         clock: Callable[[], date] = date.today,
         official_max_age_days: int = 90,
         guide_max_age_days: int = 3_650,
+        fusion_rank_constant: int = 60,
+        fusion_lexical_weight: float = 0.8,
+        fusion_vector_weight: float = 1.0,
+        fusion_max_chunks_per_document: int = 1,
     ) -> None:
         self._client = client
         self._embedder = embedder
@@ -70,6 +74,16 @@ class OpenSearchHybridRetriever:
             raise ValueError("guide_max_age_days must be between 1 and 7300")
         self._official_max_age_days = official_max_age_days
         self._guide_max_age_days = guide_max_age_days
+        if fusion_rank_constant < 1:
+            raise ValueError("fusion_rank_constant must be positive")
+        if fusion_lexical_weight <= 0 or fusion_vector_weight <= 0:
+            raise ValueError("fusion weights must be positive")
+        if not 1 <= fusion_max_chunks_per_document <= 1_000:
+            raise ValueError("fusion_max_chunks_per_document must be between 1 and 1000")
+        self._fusion_rank_constant = fusion_rank_constant
+        self._fusion_lexical_weight = fusion_lexical_weight
+        self._fusion_vector_weight = fusion_vector_weight
+        self._fusion_max_chunks_per_document = fusion_max_chunks_per_document
 
     def _is_fresh(self, result: RetrievalResult) -> bool:
         """Fail closed when capture/effective metadata cannot prove currentness."""
@@ -113,6 +127,10 @@ class OpenSearchHybridRetriever:
             lexical_hits=lexical.hits.hits,
             vector_hits=semantic.hits.hits,
             limit=request.limit,
+            rank_constant=self._fusion_rank_constant,
+            lexical_weight=self._fusion_lexical_weight,
+            vector_weight=self._fusion_vector_weight,
+            max_chunks_per_document=self._fusion_max_chunks_per_document,
         )
 
     @staticmethod

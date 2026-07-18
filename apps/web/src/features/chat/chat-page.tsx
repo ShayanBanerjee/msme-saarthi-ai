@@ -3,6 +3,7 @@ import {
   BookOpen,
   CircleStop,
   Clipboard,
+  Image as ImageIcon,
   Landmark,
   Lightbulb,
   Plus,
@@ -22,6 +23,7 @@ import {
   ChatApiError,
   type ChatCitation,
   clearChatHistory,
+  generateBusinessImage,
   getChatHistory,
   streamChatMessage,
 } from "./chat-api";
@@ -51,6 +53,30 @@ const promptTemplates = [
     title: "Create a 30-day growth plan",
     prompt: "Help me choose one customer segment, improve my offer, and create a focused 30-day sales experiment with measurable weekly actions.",
   },
+  {
+    mode: "funding_readiness",
+    icon: WalletCards,
+    title: "Improve my cash flow",
+    prompt: "Help me map my receivable days, inventory days, payable days, and peak monthly cash gap. Then suggest the safest actions to improve working capital without assuming I qualify for a scheme.",
+  },
+  {
+    mode: "scheme_navigator",
+    icon: BookOpen,
+    title: "Build my document checklist",
+    prompt: "Ask what support I am pursuing, then build a practical document and evidence checklist. Separate generally useful records from documents explicitly required by a cited official source.",
+  },
+  {
+    mode: "growth_strategist",
+    icon: TrendingUp,
+    title: "Reach new customers",
+    prompt: "Help me select one promising customer segment and design a low-cost four-week market test with a clear offer, channel, conversion target, and learning goal.",
+  },
+  {
+    mode: "business_analyst",
+    icon: Lightbulb,
+    title: "Diagnose what is blocking growth",
+    prompt: "Help me identify the single constraint blocking growth. Ask for the current baseline, target, deadline, and evidence before recommending a practical next step.",
+  },
 ] as const satisfies readonly {
   mode: AdvisorMode;
   icon: typeof Landmark;
@@ -65,6 +91,7 @@ interface Turn {
   readonly question: string;
   answer: string;
   citations: ChatCitation[];
+  imageUrl?: string;
 }
 
 function getConversationId(): string {
@@ -106,6 +133,7 @@ export default function ChatPage() {
   const [status, setStatus] = useState<ChatStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [advisorMode, setAdvisorMode] = useState<AdvisorMode>("business_analyst");
+  const [imageMode, setImageMode] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const conversationId = useRef(getConversationId());
   const abortController = useRef<AbortController | null>(null);
@@ -134,6 +162,7 @@ export default function ChatPage() {
     setTurns([]);
     setDraft("");
     setAdvisorMode("business_analyst");
+    setImageMode(false);
     setError(null);
     setStatus("idle");
     window.setTimeout(() => composer.current?.focus(), 0);
@@ -141,7 +170,14 @@ export default function ChatPage() {
 
   function chooseTemplate(template: (typeof promptTemplates)[number]) {
     setAdvisorMode(template.mode);
+    setImageMode(false);
     setDraft(template.prompt);
+    window.setTimeout(() => composer.current?.focus(), 0);
+  }
+
+  function chooseImageTemplate() {
+    setImageMode(true);
+    setDraft("Create a professional visual concept for my MSME product, workspace, or customer story. I will describe the business and the scene I need.");
     window.setTimeout(() => composer.current?.focus(), 0);
   }
 
@@ -171,7 +207,16 @@ export default function ChatPage() {
     setError(null);
     setStatus("understanding");
     try {
-      await streamChatMessage(conversationId.current, value, {}, advisorMode, "balanced", {
+      if (imageMode) {
+        setStatus("generating");
+        const imageUrl = await generateBusinessImage(value, controller.signal);
+        setTurns((items) => items.map((turn) => turn.id === id ? {
+          ...turn,
+          answer: "Here is your generated business visual. It is illustrative—not official programme evidence or an eligibility result.",
+          imageUrl,
+        } : turn));
+        setImageMode(false);
+      } else await streamChatMessage(conversationId.current, value, {}, advisorMode, "balanced", {
         onStatus: setStatus,
         onText: (text) => setTurns((items) => items.map((turn) => turn.id === id ? { ...turn, answer: turn.answer + text } : turn)),
         onReplace: (text) => setTurns((items) => items.map((turn) => turn.id === id ? { ...turn, answer: text } : turn)),
@@ -200,11 +245,11 @@ export default function ChatPage() {
   }
 
   const statusCopy = status === "understanding"
-    ? "Understanding your question"
+      ? "Understanding your question"
     : status === "retrieving"
       ? "Searching reviewed sources"
       : status === "generating"
-        ? "Writing a cited response"
+        ? imageMode ? "Creating your business visual" : "Writing a cited response"
         : "Saarthi can make mistakes. Verify important programme details with the cited authority.";
 
   function renderComposer(isHome: boolean) {
@@ -223,7 +268,7 @@ export default function ChatPage() {
           value={draft}
         />
         <div className="chat-composer-actions">
-          <span className="chat-source-state"><span />Official sources on</span>
+          <span className="chat-source-state"><span />{imageMode ? "Image generation on" : "Official sources on"}</span>
           {isBusy
             ? <Button aria-label="Stop response" className="chat-send-button" onClick={() => abortController.current?.abort()} size="icon" type="button"><CircleStop className="size-4" /></Button>
             : <Button aria-label="Send message" className="chat-send-button" disabled={!draft.trim()} size="icon" type="submit"><ArrowUp className="size-4" /></Button>}
@@ -261,6 +306,7 @@ export default function ChatPage() {
               const Icon = template.icon;
               return <button key={template.title} onClick={() => chooseTemplate(template)} type="button"><Icon className="size-4" /><span>{template.title}</span></button>;
             })}
+            <button onClick={chooseImageTemplate} type="button"><ImageIcon className="size-4" /><span>Create a business visual</span></button>
           </div>
           <div aria-label="Reviewed discovery sources" className="chat-source-portals">
             <span>Reviewed discovery sources</span>
@@ -276,7 +322,7 @@ export default function ChatPage() {
               <BrandMark size="sm" />
               <div className="min-w-0 flex-1">
                 <div className="chat-answer-toolbar"><strong>Saarthi</strong>{turn.answer && <button aria-label="Copy answer" onClick={() => void navigator.clipboard?.writeText(turn.answer)} type="button"><Clipboard className="size-3.5" /></button>}</div>
-                {turn.answer ? <><AnswerContent streaming={isBusy && index === turns.length - 1} text={turn.answer} />{isBusy && index === turns.length - 1 && <div aria-label="Saarthi is composing" className="chat-thinking chat-thinking-inline" role="status"><span /><span /><span /><p>{statusCopy}</p></div>}</> : <div aria-label="Saarthi is composing" className="chat-thinking" role="status"><span /><span /><span /><p>{statusCopy}</p></div>}
+                {turn.answer ? <><AnswerContent streaming={isBusy && index === turns.length - 1} text={turn.answer} />{turn.imageUrl && <img alt={`Generated business visual for: ${turn.question}`} className="mt-5 w-full max-w-xl rounded-3xl border border-obsidian/10 object-cover shadow-xl" src={turn.imageUrl} />}{isBusy && index === turns.length - 1 && <div aria-label="Saarthi is composing" className="chat-thinking chat-thinking-inline" role="status"><span /><span /><span /><p>{statusCopy}</p></div>}</> : <div aria-label="Saarthi is composing" className="chat-thinking" role="status"><span /><span /><span /><p>{statusCopy}</p></div>}
                 {turn.citations.length > 0 && <div className="chat-citations">
                   <p>Sources</p>
                   <div>{turn.citations.map((citation) => <a href={citation.source_url} key={citation.citation_id} rel="noreferrer" target="_blank"><BookOpen className="size-4" /><span><strong>{citation.source_label}</strong><small>{citation.source_kind === "official_scheme" ? "Official evidence" : `Open business guide${citation.license_label ? ` · ${citation.license_label}` : ""}`} · {citation.section}</small></span></a>)}</div>

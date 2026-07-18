@@ -1,7 +1,7 @@
 # Retrieval-Augmented Generation Design
 
 **Status:** Living design; hybrid retrieval and explicit ingestion slice implemented
-**Last updated:** 2026-07-15
+**Last updated:** 2026-07-16
 **Related:** [Eligibility engine](ELIGIBILITY_ENGINE.md), [LangGraph design](LANGGRAPH_DESIGN.md), [ADR-0004](../architecture/adr/0004-opensearch-hybrid-retrieval.md)
 
 ## 1. Purpose and boundary
@@ -14,11 +14,11 @@ All retrieved content is untrusted input. It may contain errors, stale statement
 
 The API can select either a curated development retriever or the OpenSearch hybrid retriever. The latter runs phrase-boosted BM25 and vector queries, applies validated filters, gives lexical evidence a conservative fusion weight, deduplicates chunks, limits source crowding, and retains citation metadata. Before evidence reaches generation, retrieval fails closed for missing capture timestamps, non-published/ineffective versions, future captures, and sources older than the configured evidence-class age. The worker records a UTC `captured_at` value on every indexed chunk. Evidence is typed as `official_scheme` or `business_guide`; only the former may support material scheme claims.
 
-The answer provider is deterministic by default with an optional OpenAI Responses adapter. The OpenAI adapter consumes provider-native semantic SSE events and forwards text deltas without first buffering the complete response. Cancellation closes both graph and provider generators. A total generation deadline converts timeout into a deterministic source-list fallback. Streamed text remains provisional: claim validation runs before persistence and the authoritative `final` event. Unsupported output is replaced using `text_replace`, and only citations actually used by the validated answer are attached.
+The answer provider is deterministic by default with an optional OpenAI Responses adapter. The OpenAI adapter consumes provider-native semantic SSE events, while the service coalesces very small provider tokens into bounded UI deltas without changing the generated text. Cancellation closes both graph and provider generators. A total generation deadline converts timeout into a deterministic source-list fallback. Streamed text remains provisional: claim validation runs before persistence and the authoritative `final` event. Unsupported output is replaced using `text_replace`, and only citations actually used by the validated answer are attached.
 
-The reviewed local manifest currently contains six official government sources and two CC BY business textbooks fetched from the Library of Congress. It is documented in `apps/worker/sources/README.md`. A complete local run created 4,382 chunks in `msme-schemes-v2`. Key-free development uses a 384-dimensional normalized token/bigram feature vector; production can select the OpenAI embeddings adapter and an explicitly dimensioned, separate index. The query and ingestion adapters must always use the same provider, model, dimensions, and index version.
+The reviewed local manifest currently contains 16 official government sources and 15 open-access business books. It is documented in `apps/worker/sources/README.md`. The reviewed 2026-07-16 refresh created 11,565 business-guide chunks in `msme-schemes-v2`; the evidence classes remain isolated. Key-free development uses a 384-dimensional normalized token/bigram feature vector; production can select the OpenAI embeddings adapter and an explicitly dimensioned, separate index. The query and ingestion adapters must always use the same provider, model, dimensions, and index version.
 
-This slice does not yet provide immutable raw-content object snapshots, PostgreSQL-backed ingestion/publication jobs, reviewer approval UI, scheduled refresh, or production relevance/entailment evaluation. The implemented deterministic claim validator is a launch safeguard, but it does not replace corpus-based semantic entailment evaluation or human source review.
+The versioned retrieval pilot in `packages/evaluation` now measures lexical, vector and hybrid retrieval plus citation provenance across every reviewed source. It is not yet a reviewer-approved launch corpus and does not provide claim-entailment scoring. This slice also does not yet provide immutable raw-content object snapshots, PostgreSQL-backed ingestion/publication jobs, reviewer approval UI, or scheduled refresh. The implemented deterministic claim validator is a launch safeguard, but it does not replace corpus-based semantic entailment evaluation or human source review.
 
 ## 2. MVP versus later phases
 
@@ -153,7 +153,7 @@ For eligibility explanations, factual outcomes and missing fields come exclusive
 
 ## 11. Evaluation and release gates
 
-Use a versioned synthetic golden corpus containing invented authorities and schemes only. Do not put real unsupported scheme facts into fixtures. Evaluate:
+Use synthetic fixture corpora containing invented authorities and schemes for claim and eligibility behavior. A retrieval-only pilot may map synthetic user utterances to reviewed real source identifiers, provided it contains no unsupported factual assertions or expected eligibility decisions. Evaluate:
 
 - lexical/vector/hybrid recall@k, MRR/nDCG, filter correctness, and diversity;
 - citation precision/recall, citation resolvability, claim support, and version correctness;
@@ -163,6 +163,8 @@ Use a versioned synthetic golden corpus containing invented authorities and sche
 
 Launch gates are 100% resolvable citations for published material claims, zero known eligibility decisions originating from a model, and approved thresholds recorded in the evaluation package. Threshold values must be set from a representative pilot corpus before launch.
 
+The `msme-rag-v1` tuning set is manifest-hashed and covers all 16 official sources and 15 reviewed business books. A separate 20-case held-out set is evaluated only after fusion selection. Reports record dataset hashes, evidence-class metrics, and the exact index/model/dimension/fusion contract. Alias promotion fails closed unless a named human approved both judgment sets, all 31 sources are indexed, citations are fully resolvable, and the versioned release thresholds pass. A high retrieval score does not approve a source, claim, licence, or eligibility rule.
+
 ## 12. Observability and privacy
 
 Record query/result IDs, versions, ranks/scores, filters, latency, provider/model/prompt version, token counts, validation outcome, and correlation ID. Avoid raw user queries or profile facts in general logs; store evaluation/debug samples only under an approved access and retention policy. Provider data retention and region settings are deployment configuration and must be reviewed before production.
@@ -171,6 +173,6 @@ Record query/result IDs, versions, ranks/scores, filters, latency, provider/mode
 
 - Pilot source authorities, categories, languages, and freshness SLAs.
 - Embedding models/dimensions and whether OpenAI/Gemini embedding parity is required.
-- Initial hybrid weights/RRF constants and evidence thresholds based on evaluation.
+- Reviewer-approved expansion of graded relevance judgments beyond source-level positives.
 - Parser/OCR boundary and safe document-processing service.
-- Human review workflow for conflicts, translations, and urgent withdrawal.
+- Human review workflow for conflicts, translations, and urgent withdrawal beyond the implemented relevance-judgment gate.

@@ -9,7 +9,7 @@ describe("public scheme discovery", () => {
   it("leads with sourced schemes and exposes every Indian jurisdiction", () => {
     render(<PublicHomePage onAuthenticate={vi.fn()} />);
 
-    expect(screen.getByRole("heading", { name: /there may be a scheme for your next move/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /discover government schemes for your msme’s next move/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open ministry source/i })).toHaveAttribute("href", expect.stringContaining("msme.gov.in"));
     expect(screen.getByText("Andhra Pradesh")).toBeInTheDocument();
     expect(screen.getByText("West Bengal")).toBeInTheDocument();

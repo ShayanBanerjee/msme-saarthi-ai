@@ -5,17 +5,41 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
 from app.core.logging import get_logger
 from app.features.chat.dependencies import get_chat_service, require_actor
 from app.features.chat.models import AuthenticatedActor
-from app.features.chat.schemas import ChatHistoryResponse, ChatRequest, ErrorEvent, encode_sse
+from app.features.chat.schemas import (
+    ChatHistoryResponse,
+    ChatRequest,
+    ErrorEvent,
+    ImageGenerationRequest,
+    ImageGenerationResponse,
+    encode_sse,
+)
 from app.features.chat.service import ChatService
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = get_logger(__name__)
+
+
+@router.post("/images", response_model=ImageGenerationResponse)
+async def generate_business_image(
+    payload: ImageGenerationRequest,
+    actor: Annotated[AuthenticatedActor, Depends(require_actor)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
+) -> ImageGenerationResponse:
+    """Generate a visual only after an authenticated, explicit user request."""
+    try:
+        image_data_url = await service.generate_image(actor=actor, prompt=payload.prompt)
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Image generation is unavailable right now. Please retry later.",
+        ) from exc
+    return ImageGenerationResponse(image_data_url=image_data_url)
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=ChatHistoryResponse)

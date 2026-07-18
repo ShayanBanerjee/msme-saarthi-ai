@@ -35,8 +35,10 @@ class Settings(BaseSettings):
     llm_provider: Literal["mock", "openai"] = "mock"
     openai_api_key: SecretStr | None = None
     openai_model: str = Field(default="gpt-5.4-mini", min_length=1, max_length=128)
+    openai_image_model: str = Field(default="gpt-image-2", min_length=1, max_length=128)
     openai_base_url: str = "https://api.openai.com/v1"
     llm_timeout_seconds: float = Field(default=30.0, ge=1.0, le=120.0)
+    image_generation_timeout_seconds: float = Field(default=120.0, ge=10.0, le=300.0)
     retrieval_provider: Literal["curated", "opensearch"] = "curated"
     embedding_provider: Literal["local", "openai"] = "local"
     embedding_model: str = Field(default="text-embedding-3-small", min_length=1, max_length=128)
@@ -45,6 +47,10 @@ class Settings(BaseSettings):
     opensearch_index: str = Field(default="msme-schemes-v2", pattern=r"^[a-z0-9._-]+$")
     retrieval_official_max_age_days: int = Field(default=90, ge=1, le=3_650)
     retrieval_guide_max_age_days: int = Field(default=3_650, ge=1, le=7_300)
+    retrieval_rrf_rank_constant: int = Field(default=60, ge=1, le=1_000)
+    retrieval_rrf_lexical_weight: float = Field(default=0.8, gt=0, le=10)
+    retrieval_rrf_vector_weight: float = Field(default=1.0, gt=0, le=10)
+    retrieval_rrf_max_chunks_per_document: int = Field(default=1, ge=1, le=1_000)
 
 
 @lru_cache

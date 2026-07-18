@@ -101,6 +101,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             index=resolved_settings.opensearch_index,
             official_max_age_days=resolved_settings.retrieval_official_max_age_days,
             guide_max_age_days=resolved_settings.retrieval_guide_max_age_days,
+            fusion_rank_constant=resolved_settings.retrieval_rrf_rank_constant,
+            fusion_lexical_weight=resolved_settings.retrieval_rrf_lexical_weight,
+            fusion_vector_weight=resolved_settings.retrieval_rrf_vector_weight,
+            fusion_max_chunks_per_document=(
+                resolved_settings.retrieval_rrf_max_chunks_per_document
+            ),
         )
     chat_service, chat_repository = create_default_chat_service(
         settings=resolved_settings,

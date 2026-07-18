@@ -13,14 +13,20 @@ class _FusedHit:
     vector_rank: int | None = None
 
 
-def _unique_ranked(hits: tuple[OpenSearchHit, ...]) -> tuple[OpenSearchHit, ...]:
+def _unique_ranked(
+    hits: tuple[OpenSearchHit, ...], *, max_chunks_per_document: int
+) -> tuple[OpenSearchHit, ...]:
     seen: set[str] = set()
+    document_counts: dict[str, int] = {}
     unique: list[OpenSearchHit] = []
     for hit in hits:
         chunk_id = hit.source.chunk_id
-        if chunk_id not in seen:
-            seen.add(chunk_id)
-            unique.append(hit)
+        document_id = hit.source.document_id
+        if chunk_id in seen or document_counts.get(document_id, 0) >= max_chunks_per_document:
+            continue
+        seen.add(chunk_id)
+        document_counts[document_id] = document_counts.get(document_id, 0) + 1
+        unique.append(hit)
     return tuple(unique)
 
 
@@ -30,18 +36,31 @@ def reciprocal_rank_fusion(
     vector_hits: tuple[OpenSearchHit, ...],
     limit: int,
     rank_constant: int = 60,
-    lexical_weight: float = 1.6,
+    lexical_weight: float = 0.8,
     vector_weight: float = 1.0,
+    max_chunks_per_document: int = 1,
 ) -> tuple[RetrievalResult, ...]:
     """Fuse ranks, deduplicate by source chunk, and use chunk ID as stable tie-breaker."""
     if rank_constant < 1:
         raise ValueError("rank_constant must be positive")
     if lexical_weight <= 0 or vector_weight <= 0:
         raise ValueError("fusion weights must be positive")
+    if not 1 <= max_chunks_per_document <= 1_000:
+        raise ValueError("max_chunks_per_document must be between 1 and 1000")
     fused: dict[str, _FusedHit] = {}
     for source, weight, hits in (
-        ("lexical", lexical_weight, _unique_ranked(lexical_hits)),
-        ("vector", vector_weight, _unique_ranked(vector_hits)),
+        (
+            "lexical",
+            lexical_weight,
+            _unique_ranked(
+                lexical_hits, max_chunks_per_document=max_chunks_per_document
+            ),
+        ),
+        (
+            "vector",
+            vector_weight,
+            _unique_ranked(vector_hits, max_chunks_per_document=max_chunks_per_document),
+        ),
     ):
         for rank, hit in enumerate(hits, start=1):
             chunk_id = hit.source.chunk_id

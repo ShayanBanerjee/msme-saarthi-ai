@@ -85,6 +85,40 @@ describe("Saarthi advisor workspace", () => {
     await user.click(screen.getByRole("button", { name: "Find schemes for my business" }));
 
     expect(screen.getByLabelText<HTMLTextAreaElement>("Message Saarthi").value).toContain("Government of India");
+    expect(screen.getByRole("button", { name: "Improve my cash flow" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Build my document checklist" })).toBeInTheDocument();
+  });
+
+  it("generates an image only after the image prompt is selected", async () => {
+    const imageDataUrl = "data:image/webp;base64,c3ludGhldGlj";
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url === "/api/v1/chat/images" && init?.method === "POST") {
+        return Promise.resolve(new Response(JSON.stringify({ image_data_url: imageDataUrl }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ conversation_id: conversationId, items: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderChat();
+
+    await screen.findByRole("heading", { name: /What can I help you grow/i });
+    await user.click(screen.getByRole("button", { name: "Create a business visual" }));
+    await user.clear(screen.getByLabelText("Message Saarthi"));
+    await user.type(screen.getByLabelText("Message Saarthi"), "A modern textile workshop{enter}");
+
+    const image = await screen.findByRole("img", { name: /A modern textile workshop/i });
+    expect(image).toHaveAttribute("src", imageDataUrl);
+    expect(fetchMock.mock.calls.some(([input]) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      return url === "/api/v1/chat/images";
+    })).toBe(true);
   });
 
   it("keeps Shift+Enter as a new line", async () => {

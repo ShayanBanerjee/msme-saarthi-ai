@@ -1,7 +1,9 @@
 """Allowlisted source fetch, extraction, chunking and OpenSearch indexing."""
 
+import asyncio
 import hashlib
 import ipaddress
+import json
 import math
 import re
 import socket
@@ -273,11 +275,30 @@ def _is_public_host(host: str) -> bool:
 
 
 class HttpSourceFetcher:
-    def __init__(self, *, max_bytes: int = 140_000_000, timeout_seconds: float = 30.0) -> None:
+    def __init__(
+        self,
+        *,
+        max_bytes: int = 140_000_000,
+        timeout_seconds: float = 60.0,
+        max_attempts: int = 3,
+    ) -> None:
         self._max_bytes = max_bytes
         self._timeout = timeout_seconds
+        if not 1 <= max_attempts <= 5:
+            raise ValueError("max_attempts must be between 1 and 5")
+        self._max_attempts = max_attempts
 
     async def fetch(self, source: SourceSpec) -> FetchedSource:
+        for attempt in range(1, self._max_attempts + 1):
+            try:
+                return await self._fetch_once(source)
+            except (httpx.TimeoutException, httpx.TransportError):
+                if attempt == self._max_attempts:
+                    raise
+                await asyncio.sleep(2 ** (attempt - 1))
+        raise RuntimeError("source fetch retry loop exited unexpectedly")
+
+    async def _fetch_once(self, source: SourceSpec) -> FetchedSource:
         parsed = urlparse(str(source.url))
         if parsed.scheme != "https" or parsed.hostname != source.allowed_host:
             raise ValueError("source URL must use HTTPS and the allowlisted host")
@@ -311,47 +332,114 @@ class HttpSourceFetcher:
         return FetchedSource(body=bytes(body), content_type=content_type)
 
 
+def build_index_definition(
+    *, embedding_dimensions: int, profile: Literal["development", "production"]
+) -> dict[str, object]:
+    """Return an explicit, versionable mapping for derived retrieval indexes."""
+    vector: dict[str, object] = {
+        "type": "knn_vector",
+        "dimension": embedding_dimensions,
+    }
+    settings: dict[str, object] = {"index.knn": True}
+    if profile == "production":
+        vector["method"] = {
+            "name": "hnsw",
+            "space_type": "cosinesimil",
+            "engine": "lucene",
+            "parameters": {"ef_construction": 128, "m": 24},
+        }
+        settings.update(
+            {
+                "number_of_shards": 1,
+                "number_of_replicas": 1,
+                "refresh_interval": "30s",
+            }
+        )
+    keyword_with_text = {"type": "text", "fields": {"keyword": {"type": "keyword"}}}
+    return {
+        "settings": settings,
+        "mappings": {
+            "dynamic": "strict",
+            "properties": {
+                "chunk_id": {"type": "keyword"},
+                "chunk_text": {"type": "text"},
+                "citation_id": {"type": "keyword"},
+                "document_id": keyword_with_text,
+                "source_label": {"type": "text"},
+                "source_url": {"type": "keyword", "index": False},
+                "page": {"type": "integer"},
+                "section": {"type": "text"},
+                "state_codes": keyword_with_text,
+                "scheme_status": keyword_with_text,
+                "language": keyword_with_text,
+                "valid_from": {"type": "date"},
+                "valid_until": {"type": "date"},
+                "captured_at": {"type": "date"},
+                "embedding": vector,
+                "embedding_model": {"type": "keyword"},
+                "content_checksum": {"type": "keyword"},
+                "source_kind": keyword_with_text,
+                "license_label": {"type": "keyword"},
+            },
+        },
+    }
+
+
 class OpenSearchChunkSink:
     def __init__(
-        self, *, base_url: str, index: str = "msme-schemes-v2", embedding_dimensions: int = 384
+        self,
+        *,
+        base_url: str,
+        index: str = "msme-schemes-v2",
+        embedding_dimensions: int = 384,
+        index_profile: Literal["development", "production"] = "development",
+        bulk_size: int = 200,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._index = index
         self._embedding_dimensions = embedding_dimensions
+        self._index_profile = index_profile
+        if not 1 <= bulk_size <= 1_000:
+            raise ValueError("bulk_size must be between 1 and 1000")
+        self._bulk_size = bulk_size
 
     async def index(self, chunks: Iterable[IndexedChunk]) -> int:
-        count = 0
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            await client.put(
+        pending = tuple(chunks)
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            create_response = await client.put(
                 f"{self._base_url}/{self._index}",
-                json={
-                    "settings": {"index.knn": True},
-                    "mappings": {
-                        "properties": {
-                            "embedding": {
-                                "type": "knn_vector",
-                                "dimension": self._embedding_dimensions,
-                            },
-                            "embedding_model": {"type": "keyword"},
-                            "chunk_text": {"type": "text"},
-                            "source_kind": {
-                                "type": "text",
-                                "fields": {"keyword": {"type": "keyword"}},
-                            },
-                            "license_label": {"type": "keyword"},
-                            "captured_at": {"type": "date"},
-                        }
-                    },
-                },
+                json=build_index_definition(
+                    embedding_dimensions=self._embedding_dimensions,
+                    profile=self._index_profile,
+                ),
             )
-            for chunk in chunks:
-                response = await client.put(
-                    f"{self._base_url}/{self._index}/_doc/{chunk.chunk_id}",
-                    json=chunk.model_dump(mode="json"),
+            if create_response.status_code not in {200, 400}:
+                create_response.raise_for_status()
+            if create_response.status_code == 400 and "resource_already_exists_exception" not in (
+                create_response.text
+            ):
+                create_response.raise_for_status()
+            mapping_response = await client.get(f"{self._base_url}/{self._index}/_mapping")
+            mapping_response.raise_for_status()
+            mapping = mapping_response.json()[self._index]["mappings"]["properties"]
+            if mapping["embedding"]["dimension"] != self._embedding_dimensions:
+                raise ValueError("existing index has an incompatible embedding dimension")
+            for start in range(0, len(pending), self._bulk_size):
+                lines: list[str] = []
+                for chunk in pending[start : start + self._bulk_size]:
+                    lines.append(json.dumps({"index": {"_id": chunk.chunk_id}}))
+                    lines.append(json.dumps(chunk.model_dump(mode="json")))
+                response = await client.post(
+                    f"{self._base_url}/{self._index}/_bulk",
+                    params={"refresh": "false"},
+                    content=("\n".join(lines) + "\n").encode(),
+                    headers={"Content-Type": "application/x-ndjson"},
                 )
                 response.raise_for_status()
-                count += 1
-        return count
+                payload = response.json()
+                if payload.get("errors") is True:
+                    raise ValueError("OpenSearch bulk indexing returned item errors")
+        return len(pending)
 
 
 async def ingest_source(

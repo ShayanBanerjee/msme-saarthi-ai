@@ -86,6 +86,28 @@ def test_completed_stream_persists_user_and_assistant_messages() -> None:
     asyncio.run(scenario())
 
 
+def test_stream_coalesces_small_provider_tokens_without_changing_text() -> None:
+    async def scenario() -> None:
+        service, _repository, provider = _service()
+        events = await _collect(
+            service.stream_message(
+                actor=ACTOR,
+                conversation_id=CONVERSATION_ID,
+                message="Give me a coalesced synthetic answer.",
+                business_context=BusinessContext(),
+                correlation_id=CORRELATION_ID,
+                is_disconnected=_connected,
+            )
+        )
+        deltas = [event.text for event in events if isinstance(event, TextDeltaEvent)]
+        expected = (await provider.generate(provider.calls[0])).text
+
+        assert " ".join("".join(deltas).split()) == " ".join(expected.split())
+        assert len(deltas) < len(expected.split()) // 6
+
+    asyncio.run(scenario())
+
+
 def test_disconnect_stops_graph_and_does_not_persist_assistant() -> None:
     async def scenario() -> None:
         service, repository, provider = _service()
@@ -194,7 +216,7 @@ def test_timeout_replaces_provisional_text_and_persists_only_safe_fallback() -> 
             conversation_id=CONVERSATION_ID,
         )
 
-        assert any(isinstance(event, TextDeltaEvent) for event in events)
+        assert not any(isinstance(event, TextDeltaEvent) for event in events)
         replacement = next(event for event in events if isinstance(event, TextReplaceEvent))
         final = next(event for event in events if isinstance(event, FinalEvent))
         assert final.completion_status == "fallback"
@@ -252,7 +274,7 @@ def test_disconnect_closes_provider_stream_and_skips_assistant_persistence() -> 
             conversation_id=CONVERSATION_ID,
         )
 
-        assert any(isinstance(event, TextDeltaEvent) for event in events)
+        assert not any(isinstance(event, TextDeltaEvent) for event in events)
         assert provider.closed
         assert [message.role for message in messages] == [MessageRole.USER]
 
