@@ -1,0 +1,372 @@
+{
+  "by_source_kind": {
+    "business_guide": {
+      "hybrid": {
+        "case_count": 10,
+        "citation_accuracy_at_5": 1.0,
+        "citation_metadata_completeness": 1.0,
+        "citation_resolvability": 1.0,
+        "expected_source_coverage": 1.0,
+        "hit_rate_at_5": 1.0,
+        "mean_reciprocal_rank": 0.8333333333333334,
+        "ndcg_at_10": 0.8761859507142915,
+        "recall_at_10": 1.0
+      },
+      "lexical": {
+        "case_count": 10,
+        "citation_accuracy_at_5": 1.0,
+        "citation_metadata_completeness": 1.0,
+        "citation_resolvability": 1.0,
+        "expected_source_coverage": 1.0,
+        "hit_rate_at_5": 1.0,
+        "mean_reciprocal_rank": 0.7666666666666667,
+        "ndcg_at_10": 0.8222164958394484,
+        "recall_at_10": 1.0
+      },
+      "vector": {
+        "case_count": 10,
+        "citation_accuracy_at_5": 1.0,
+        "citation_metadata_completeness": 1.0,
+        "citation_resolvability": 1.0,
+        "expected_source_coverage": 1.0,
+        "hit_rate_at_5": 1.0,
+        "mean_reciprocal_rank": 0.95,
+        "ndcg_at_10": 0.9630929753571458,
+        "recall_at_10": 1.0
+      }
+    },
+    "official_scheme": {
+      "hybrid": {
+        "case_count": 10,
+        "citation_accuracy_at_5": 0.9,
+        "citation_metadata_completeness": 1.0,
+        "citation_resolvability": 1.0,
+        "expected_source_coverage": 0.9,
+        "hit_rate_at_5": 0.9,
+        "mean_reciprocal_rank": 0.5666666666666667,
+        "ndcg_at_10": 0.652371901428583,
+        "recall_at_10": 0.9
+      },
+      "lexical": {
+        "case_count": 10,
+        "citation_accuracy_at_5": 0.8,
+        "citation_metadata_completeness": 1.0,
+        "citation_resolvability": 1.0,
+        "expected_source_coverage": 0.8,
+        "hit_rate_at_5": 0.8,
+        "mean_reciprocal_rank": 0.5333333333333333,
+        "ndcg_at_10": 0.602371901428583,
+        "recall_at_10": 0.8
+      },
+      "vector": {
+        "case_count": 10,
+        "citation_accuracy_at_5": 0.9,
+        "citation_metadata_completeness": 1.0,
+        "citation_resolvability": 1.0,
+        "expected_source_coverage": 0.9,
+        "hit_rate_at_5": 0.9,
+        "mean_reciprocal_rank": 0.5666666666666667,
+        "ndcg_at_10": 0.652371901428583,
+        "recall_at_10": 0.9
+      }
+    }
+  },
+  "cases": [
+    {
+      "case_id": "heldout-aspire-rural-incubator",
+      "expected_document_ids": [
+        "msme-aspire"
+      ],
+      "ranks": {
+        "hybrid": 2,
+        "lexical": 2,
+        "vector": 2
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-tide-trl-startup",
+      "expected_document_ids": [
+        "meity-tide-2"
+      ],
+      "ranks": {
+        "hybrid": 2,
+        "lexical": 3,
+        "vector": 3
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-biotech-ignition",
+      "expected_document_ids": [
+        "birac-big"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 1,
+        "vector": 2
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-artisan-support",
+      "expected_document_ids": [
+        "msme-pm-vishwakarma"
+      ],
+      "ranks": {
+        "hybrid": 3,
+        "lexical": 1,
+        "vector": 1
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-food-formalisation",
+      "expected_document_ids": [
+        "pmfme-scheme-guidelines"
+      ],
+      "ranks": {
+        "hybrid": 2,
+        "lexical": 2,
+        "vector": 2
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-scheme-discovery",
+      "expected_document_ids": [
+        "myscheme-discovery-index"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 1,
+        "vector": 1
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-startup-guarantee",
+      "expected_document_ids": [
+        "startup-india-cgss-2025"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 2,
+        "vector": 2
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-seed-incubators",
+      "expected_document_ids": [
+        "startup-india-sisfs"
+      ],
+      "ranks": {
+        "hybrid": null,
+        "lexical": null,
+        "vector": null
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-digital-accelerator",
+      "expected_document_ids": [
+        "meity-samridh"
+      ],
+      "ranks": {
+        "hybrid": 3,
+        "lexical": null,
+        "vector": 3
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-micro-credit",
+      "expected_document_ids": [
+        "dfs-pmmy"
+      ],
+      "ranks": {
+        "hybrid": 2,
+        "lexical": 2,
+        "vector": 1
+      },
+      "source_kind": "official_scheme"
+    },
+    {
+      "case_id": "heldout-cashflow-ratios",
+      "expected_document_ids": [
+        "msu-small-business-financial-management"
+      ],
+      "ranks": {
+        "hybrid": 3,
+        "lexical": 3,
+        "vector": 1
+      },
+      "source_kind": "business_guide"
+    },
+    {
+      "case_id": "heldout-annuity-payments",
+      "expected_document_ids": [
+        "ecampus-business-finance-mathematics"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 2,
+        "vector": 1
+      },
+      "source_kind": "business_guide"
+    },
+    {
+      "case_id": "heldout-crossborder-brand",
+      "expected_document_ids": [
+        "fanshawe-global-digital-marketing"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 1,
+        "vector": 1
+      },
+      "source_kind": "business_guide"
+    },
+    {
+      "case_id": "heldout-campaign-analytics",
+      "expected_document_ids": [
+        "mcmaster-digital-marketing-fundamentals"
+      ],
+      "ranks": {
+        "hybrid": 2,
+        "lexical": 3,
+        "vector": 2
+      },
+      "source_kind": "business_guide"
+    },
+    {
+      "case_id": "heldout-green-intrapreneurship",
+      "expected_document_ids": [
+        "mdpi-sustainable-entrepreneurship"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 1,
+        "vector": 1
+      },
+      "source_kind": "business_guide"
+    },
+    {
+      "case_id": "heldout-climate-venture-learning",
+      "expected_document_ids": [
+        "lapland-sustainable-entrepreneurship"
+      ],
+      "ranks": {
+        "hybrid": 2,
+        "lexical": 1,
+        "vector": 1
+      },
+      "source_kind": "business_guide"
+    },
+    {
+      "case_id": "heldout-media-revenue",
+      "expected_document_ids": [
+        "rebus-media-innovation-entrepreneurship"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 1,
+        "vector": 1
+      },
+      "source_kind": "business_guide"
+    },
+    {
+      "case_id": "heldout-smart-sme-roadmap",
+      "expected_document_ids": [
+        "springer-industry-4-smes",
+        "mdpi-industry-4-smes"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 1,
+        "vector": 1
+      },
+      "source_kind": "business_guide"
+    },
+    {
+      "case_id": "heldout-core-business-functions",
+      "expected_document_ids": [
+        "centennial-business-fundamentals",
+        "virginia-tech-fundamentals-business"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 1,
+        "vector": 1
+      },
+      "source_kind": "business_guide"
+    },
+    {
+      "case_id": "heldout-youth-opportunity-plan",
+      "expected_document_ids": [
+        "springer-practical-youth-entrepreneurs",
+        "bccampus-entrepreneurship-toolkit"
+      ],
+      "ranks": {
+        "hybrid": 1,
+        "lexical": 2,
+        "vector": 1
+      },
+      "source_kind": "business_guide"
+    }
+  ],
+  "corpus_manifest_sha256": "09dee7ce8c426e7d3fc03425a3e76085fa8cb2a202f2e3b8f1f456477aebba5a",
+  "dataset_sha256": "8aa75163ea177b7de70b02643929589df6bed373d3087afc83c47a001a06d4e3",
+  "dataset_split": "held_out",
+  "dataset_version": "1.0.0",
+  "duration_ms": 3853,
+  "embedding_dimensions": 1024,
+  "embedding_model": "text-embedding-3-large",
+  "embedding_provider": "openai",
+  "fusion_lexical_weight": 0.8,
+  "fusion_max_chunks_per_document": 1,
+  "fusion_rank_constant": 60,
+  "fusion_vector_weight": 1.0,
+  "generated_at": "2026-07-17T06:50:26.011920Z",
+  "index_name": "msme-saarthi-semantic-v1",
+  "indexed_chunk_count": 12090,
+  "indexed_document_count": 31,
+  "judgment_status": "candidate",
+  "overall": {
+    "hybrid": {
+      "case_count": 20,
+      "citation_accuracy_at_5": 0.95,
+      "citation_metadata_completeness": 1.0,
+      "citation_resolvability": 1.0,
+      "expected_source_coverage": 0.9565217391304348,
+      "hit_rate_at_5": 0.95,
+      "mean_reciprocal_rank": 0.7,
+      "ndcg_at_10": 0.7642789260714372,
+      "recall_at_10": 0.95
+    },
+    "lexical": {
+      "case_count": 20,
+      "citation_accuracy_at_5": 0.9,
+      "citation_metadata_completeness": 1.0,
+      "citation_resolvability": 1.0,
+      "expected_source_coverage": 0.9130434782608695,
+      "hit_rate_at_5": 0.9,
+      "mean_reciprocal_rank": 0.65,
+      "ndcg_at_10": 0.7122941986340158,
+      "recall_at_10": 0.9
+    },
+    "vector": {
+      "case_count": 20,
+      "citation_accuracy_at_5": 0.95,
+      "citation_metadata_completeness": 1.0,
+      "citation_resolvability": 1.0,
+      "expected_source_coverage": 0.9565217391304348,
+      "hit_rate_at_5": 0.95,
+      "mean_reciprocal_rank": 0.7583333333333333,
+      "ndcg_at_10": 0.8077324383928645,
+      "recall_at_10": 0.95
+    }
+  },
+  "report_schema_version": "1"
+}

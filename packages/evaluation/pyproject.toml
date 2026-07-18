@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "msme-saarthi-evaluation"
+version = "0.1.0"
+description = "Offline retrieval and citation evaluation for MSME Saarthi AI"
+requires-python = ">=3.12,<3.14"
+dependencies = ["httpx>=0.28,<1.0", "pydantic>=2.10,<3.0"]
+
+[project.optional-dependencies]
+dev = ["mypy>=1.15,<2.0", "pytest>=8.3,<9.0", "ruff>=0.9,<1.0"]
+
+[project.scripts]
+msme-rag-eval = "rag_evaluation.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["rag_evaluation*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "../../apps/api"
+files = ["rag_evaluation", "tests"]
+
+[[tool.mypy.overrides]]
+module = "app.*"
+follow_imports = "skip"

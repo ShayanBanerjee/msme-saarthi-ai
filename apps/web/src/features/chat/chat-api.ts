@@ -34,6 +34,25 @@ export interface ChatCallbacks {
 
 export class ChatApiError extends Error {}
 
+export async function generateBusinessImage(prompt: string, signal?: AbortSignal): Promise<string> {
+  const response = await fetch("/api/v1/chat/images", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+    signal,
+  });
+  if (!response.ok) {
+    const problem = (await response.json().catch(() => null)) as { detail?: string } | null;
+    throw new ChatApiError(problem?.detail ?? "Saarthi could not generate this image.");
+  }
+  const payload = await response.json() as { image_data_url?: unknown };
+  if (typeof payload.image_data_url !== "string" || !payload.image_data_url.startsWith("data:image/")) {
+    throw new ChatApiError("Saarthi received an invalid image response.");
+  }
+  return payload.image_data_url;
+}
+
 export async function getChatHistory(conversationId: string): Promise<readonly ChatHistoryItem[]> {
   const response = await fetch(`/api/v1/chat/conversations/${conversationId}/messages`, {
     credentials: "include",

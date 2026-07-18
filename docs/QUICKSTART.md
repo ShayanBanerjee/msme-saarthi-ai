@@ -4,7 +4,7 @@ This is the shortest path to the full local experience: persistent PostgreSQL ac
 
 ## 1. Install and configure
 
-Prerequisites: Python 3.12+, Node.js 22+, npm, OpenSSL, and Docker Desktop with at least 2 GB available for OpenSearch.
+Prerequisites: Python 3.12+, Node.js 22+, npm, OpenSSL, and Docker Engine, Docker Desktop, or a WSL-compatible Docker runtime with at least 2 GB available for OpenSearch. On Linux, the current user must have permission to access the Docker socket.
 
 ```bash
 python3.12 -m venv .venv
@@ -33,20 +33,34 @@ cd apps/worker
 cd ../..
 ```
 
-The manifest contains reviewed official government pages/PDFs and two Library of Congress-hosted CC BY business textbooks. Government material supports scheme discovery; books support general business techniques only. Retrieved pages remain untrusted evidence and are never eligibility rules. See the [source register](../apps/worker/sources/README.md).
+The manifest contains reviewed official government pages/PDFs and 15 open-access business books. Government material supports scheme discovery; books support general business techniques only. Retrieved pages remain untrusted evidence and are never eligibility rules. See the [source register](../apps/worker/sources/README.md).
 
 ## 3. Run the application
 
-In terminal one:
+Start the complete local stack from one terminal:
 
 ```bash
-source .venv/bin/activate
-make api-run PYTHON="$PWD/.venv/bin/python"
+make start
 ```
 
-In terminal two:
+This Linux-style service command starts the Compose dependencies, applies Alembic migrations, launches the API and web server in the background, waits for both health endpoints, and writes process IDs and logs beneath the ignored `.local/` directory. It works with Docker Engine on Linux and WSL as well as Docker Desktop on macOS; it never calls `open`, `osascript`, Homebrew, or another platform-specific launcher.
+
+Manage the running stack with:
 
 ```bash
+make status
+make logs
+make logs-follow
+make restart
+make stop
+```
+
+`make` automatically selects `.venv/bin/python` when it exists. Set `PYTHON=/absolute/path/to/python` only when intentionally using a different environment.
+
+The individual foreground commands remain available for debugging:
+
+```bash
+make api-run
 make web-run
 ```
 
@@ -58,6 +72,7 @@ The answer provider is deterministic by default. To use OpenAI, add the followin
 MSME_SAARTHI_LLM_PROVIDER=openai
 MSME_SAARTHI_OPENAI_API_KEY=<never-commit-this-value>
 MSME_SAARTHI_OPENAI_MODEL=gpt-5.4-mini
+MSME_SAARTHI_OPENAI_IMAGE_MODEL=gpt-image-2
 ```
 
 ## 4. Check and stop
@@ -68,10 +83,10 @@ With both applications running:
 make local-check
 ```
 
-Stop the API and web processes with `Ctrl+C`, then stop the data services without deleting their persistent named volumes:
+Stop all application processes and data services without deleting their persistent named volumes:
 
 ```bash
-make infra-down
+make stop
 ```
 
 For SQLite without Docker, advanced configuration, test commands, troubleshooting, and production constraints, see the root [README](../README.md).

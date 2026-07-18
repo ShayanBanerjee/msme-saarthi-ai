@@ -18,6 +18,18 @@ class ChatRequest(BaseModel):
     response_depth: ResponseDepth = ResponseDepth.BALANCED
 
 
+class ImageGenerationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(min_length=3, max_length=1_000)
+
+
+class ImageGenerationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    image_data_url: str = Field(pattern=r"^data:image/webp;base64,")
+
+
 class StatusEvent(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 

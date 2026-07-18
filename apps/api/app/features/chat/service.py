@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.chat.citation_validation import validate_claim_citations
 from app.agents.chat.graph import ChatGraphRunner
+from app.agents.chat.image_provider import ImageGenerationProvider, OpenAIImageGenerationProvider
 from app.agents.chat.provider import (
     DeterministicMockProvider,
     LLMProvider,
@@ -45,13 +46,33 @@ from app.features.chat.schemas import (
 type DisconnectCheck = Callable[[], Awaitable[bool]]
 
 
-def _safe_fallback(evidence: tuple[RetrievedEvidence, ...]) -> str:
+def _safe_fallback(
+    evidence: tuple[RetrievedEvidence, ...], business_context: BusinessContext
+) -> str:
     official = tuple(
         item
         for item in evidence
         if getattr(getattr(item, "citation", None), "source_kind", None) == "official_scheme"
     )
     if not official:
+        confirmed = ", ".join(
+            part
+            for part in (
+                f"stage: {business_context.stage.value}" if business_context.stage else None,
+                f"location: {business_context.location}" if business_context.location else None,
+                f"sector: {business_context.sector}" if business_context.sector else None,
+                f"priority: {business_context.goal.value}" if business_context.goal else None,
+            )
+            if part
+        )
+        if confirmed:
+            return (
+                "I understood the confirmed business brief ("
+                f"{confirmed}), but I could not validate a scheme-specific answer from the "
+                "current evidence. Please add the exact amount or outcome you need, its timing, "
+                "and the expense it will cover so I can search again. I have not made an "
+                "eligibility or approval decision."
+            )
         return (
             "I could not complete a fully validated answer from current evidence. Please share "
             "your State or Union Territory, sector, business stage, and funding or growth need "
@@ -79,11 +100,20 @@ class ChatService:
         repository: MessageRepository,
         prompt_version: str = "chat.synthetic.v1",
         generation_timeout_seconds: float = 30.0,
+        image_provider: ImageGenerationProvider | None = None,
     ) -> None:
         self._graph = graph
         self._repository = repository
         self._prompt_version = prompt_version
         self._generation_timeout_seconds = generation_timeout_seconds
+        self._image_provider = image_provider
+
+    async def generate_image(self, *, actor: AuthenticatedActor, prompt: str) -> str:
+        """Generate an explicitly requested visual without persisting it as scheme evidence."""
+        del actor
+        if self._image_provider is None:
+            raise RuntimeError("image generation is not configured")
+        return await self._image_provider.generate(prompt)
 
     async def stream_message(
         self,
@@ -146,12 +176,24 @@ class ChatService:
         try:
             async with asyncio.timeout(self._generation_timeout_seconds):
                 stream = self._graph.stream_answer(result)
+                pending: list[str] = []
+                pending_length = 0
                 try:
                     async for chunk in stream:
                         if await is_disconnected():
                             return
                         chunks.append(chunk)
-                        yield TextDeltaEvent(text=chunk)
+                        pending.append(chunk)
+                        pending_length += len(chunk)
+                        if (
+                            pending_length >= 180
+                            or "\n" in chunk
+                        ):
+                            yield TextDeltaEvent(text="".join(pending))
+                            pending = []
+                            pending_length = 0
+                    if pending:
+                        yield TextDeltaEvent(text="".join(pending))
                 finally:
                     await stream.aclose()
         except (TimeoutError, ProviderTimeoutError):
@@ -162,7 +204,7 @@ class ChatService:
         if fallback_reason is None and (validation is None or not validation.valid):
             fallback_reason = "citation_validation_failed"
         if fallback_reason is not None:
-            answer = _safe_fallback(result.evidence)
+            answer = _safe_fallback(result.evidence, business_context)
             yield TextReplaceEvent(text=answer)
             citation_ids = tuple(
                 item.citation.citation_id
@@ -241,6 +283,7 @@ def create_default_chat_service(
         MockRetriever() if settings.environment == "test" else CuratedOfficialRetriever()
     )
     provider: LLMProvider = DeterministicMockProvider()
+    image_provider: ImageGenerationProvider | None = None
     if settings.environment != "test" and settings.llm_provider == "openai":
         if settings.openai_api_key is None:
             raise ValueError("MSME_SAARTHI_OPENAI_API_KEY is required when llm_provider=openai")
@@ -250,10 +293,17 @@ def create_default_chat_service(
             base_url=settings.openai_base_url,
             timeout_seconds=settings.llm_timeout_seconds,
         )
+        image_provider = OpenAIImageGenerationProvider(
+            api_key=settings.openai_api_key.get_secret_value(),
+            model=settings.openai_image_model,
+            base_url=settings.openai_base_url,
+            timeout_seconds=settings.image_generation_timeout_seconds,
+        )
     graph = ChatGraphRunner(retriever=retriever, provider=provider)
     return ChatService(
         graph=graph,
         repository=repository,
         prompt_version="chat.advisor.v4",
         generation_timeout_seconds=settings.llm_timeout_seconds,
+        image_provider=image_provider,
     ), repository

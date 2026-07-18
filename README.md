@@ -101,17 +101,23 @@ make api-migrate PYTHON="$PWD/.venv/bin/python"
 
 `make local-bootstrap` creates `apps/api/.env` with a new 256-bit encryption key and a SQLite URL. It refuses to overwrite an existing file because replacing the key would make existing encrypted values unreadable.
 
-Start the API in terminal one:
+Start the complete stack with the platform-neutral service workflow:
 
 ```bash
-make api-run PYTHON="$PWD/.venv/bin/python"
+make start
 ```
 
-Start the web application in terminal two:
+Inspect or manage it with Linux-style lifecycle commands:
 
 ```bash
-make web-run
+make status
+make logs
+make logs-follow
+make restart
+make stop
 ```
+
+Runtime PIDs and logs live under the ignored repository-local `.local/` directory. The same commands work with Docker Engine on Linux/WSL and Docker Desktop on macOS. For foreground debugging, `make api-run` and `make web-run` remain available separately.
 
 ### Enable the GPT-backed RAG answer adapter
 
@@ -121,6 +127,7 @@ The default remains deterministic and does not require a provider account. To us
 MSME_SAARTHI_LLM_PROVIDER=openai
 MSME_SAARTHI_OPENAI_API_KEY=<set-locally-never-commit>
 MSME_SAARTHI_OPENAI_MODEL=gpt-5.4-mini
+MSME_SAARTHI_OPENAI_IMAGE_MODEL=gpt-image-2
 ```
 
 The key is server-side only. The browser never receives it. The adapter uses the Responses API behind the application-owned provider interface; retrieved text is delimited as untrusted evidence and the model is prohibited from deciding eligibility.
@@ -134,7 +141,7 @@ Open:
 
 ## Full local services with PostgreSQL
 
-Start Docker Desktop first, then configure the API for PostgreSQL:
+Start Docker Engine or Docker Desktop, then configure the API for PostgreSQL:
 
 ```bash
 python3.12 -m venv .venv
@@ -251,21 +258,24 @@ cd apps/worker
   --embedding-dimensions 384
 ```
 
-The reviewed manifest currently produces 4,382 local chunks across six official government publications/pages and two CC BY business textbooks. The key-free local adapter is a normalized lexical-feature vector, not a substitute for an evaluated semantic model. To create production-quality OpenAI vectors, set `MSME_SAARTHI_OPENAI_API_KEY` only in the server/worker environment and ingest into a new index name:
+The reviewed manifest contains 16 official government sources and 15 open-access business books. The 2026-07-16 local refresh produced 11,565 business-guide chunks; business guides can support general techniques only and cannot support scheme or eligibility claims. The key-free local adapter is a normalized lexical-feature vector, not a substitute for an evaluated semantic model. To create production-quality OpenAI vectors, set `MSME_SAARTHI_OPENAI_API_KEY` only in the server/worker environment and ingest into a new index name:
 
 ```bash
 cd apps/worker
 ../../.venv/bin/python -m worker.cli sources/official-central.json \
   --opensearch-url http://127.0.0.1:9200 \
-  --index msme-schemes-openai-v1 \
+  --index msme-saarthi-semantic-v1 \
+  --index-profile production \
   --embedding-provider openai \
-  --embedding-model text-embedding-3-small \
-  --embedding-dimensions 384
+  --embedding-model text-embedding-3-large \
+  --embedding-dimensions 1024
 ```
 
 Then configure the API with the same embedding provider, model, dimensions, and index name. Never query an index with a different embedding configuration. The OpenAI adapter sends batched text to the provider, so review privacy, retention, region, cost, and source-publication policy before using it outside local evaluation.
 
 Indexed pages remain untrusted evidence. This command does not create structured eligibility rules or publish an eligibility decision. Production requires immutable object snapshots, malware/content scanning, reviewer approval and durable ingestion-job records before scheduled ingestion is enabled.
+
+The separate production-profile mapping uses an explicit Lucene HNSW cosine index, strict citation/provenance fields, one replica, and batched idempotent indexing. Run `make evaluation-local` for the key-free baseline; see `packages/evaluation/README.md` for the versioned 31-question evaluation and semantic-index command. The checked-in pilot labels are not yet reviewer-approved release thresholds.
 
 ## Authentication and data protection
 
@@ -419,7 +429,7 @@ The API did not load both `MSME_SAARTHI_DATABASE_URL` and `MSME_SAARTHI_DATA_ENC
 
 ### PostgreSQL connection fails
 
-Start Docker Desktop, run `make infra-up`, wait for the PostgreSQL health check, verify the URL in `apps/api/.env`, then run the migration.
+Start Docker Engine or Docker Desktop, confirm the current user can access the Docker socket, run `make infra-up`, wait for the PostgreSQL health check, verify the URL in `apps/api/.env`, then run the migration.
 
 ### Encrypted fields cannot be read
 
@@ -427,7 +437,7 @@ The configured key or key version differs from the one used to write the data. R
 
 ### Port 5173 or 8000 is already in use
 
-Stop the stale development process or use the already running instance. The smoke script expects the default ports unless `WEB_URL` and `API_URL` are overridden.
+Run `make status`, then stop a managed local stack with `make stop`. If another process owns a port, stop it explicitly before `make start`. The smoke script expects the default ports unless `WEB_URL` and `API_URL` are overridden.
 
 ### OpenSearch exits during local startup
 

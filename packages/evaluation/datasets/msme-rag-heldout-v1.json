@@ -1,0 +1,33 @@
+{
+  "schema_version": "1",
+  "dataset_version": "1.0.0",
+  "description": "Untouched held-out Indian MSME retrieval questions with candidate source judgments awaiting named human approval before alias promotion.",
+  "corpus_manifest_sha256": "09dee7ce8c426e7d3fc03425a3e76085fa8cb2a202f2e3b8f1f456477aebba5a",
+  "split": "held_out",
+  "judgment_status": "candidate",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "require_full_manifest_coverage": false,
+  "cases": [
+    {"case_id":"heldout-aspire-rural-incubator","query":"I want official information about rural livelihood business incubators and innovation support under ASPIRE.","expected_document_ids":["msme-aspire"],"source_kind":"official_scheme","tags":["rural","incubation"]},
+    {"case_id":"heldout-tide-trl-startup","query":"Which official technology incubation programme supports early technology ideas and startups around TRL 3?","expected_document_ids":["meity-tide-2"],"source_kind":"official_scheme","tags":["technology","incubation"]},
+    {"case_id":"heldout-biotech-ignition","query":"Find the responsible official source for an early biotechnology innovation grant programme.","expected_document_ids":["birac-big"],"source_kind":"official_scheme","tags":["biotechnology","grant"]},
+    {"case_id":"heldout-artisan-support","query":"Where should a traditional artisan look for the official PM Vishwakarma programme portal?","expected_document_ids":["msme-pm-vishwakarma"],"source_kind":"official_scheme","tags":["artisan"]},
+    {"case_id":"heldout-food-formalisation","query":"Find the official guidelines for formalising and supporting micro food processing enterprises.","expected_document_ids":["pmfme-scheme-guidelines"],"source_kind":"official_scheme","tags":["food-processing"]},
+    {"case_id":"heldout-scheme-discovery","query":"I need a Government of India discovery service that searches schemes from many ministries.","expected_document_ids":["myscheme-discovery-index"],"source_kind":"official_scheme","tags":["discovery"]},
+    {"case_id":"heldout-startup-guarantee","query":"Where are the DPIIT guidelines for the credit guarantee programme intended for startups?","expected_document_ids":["startup-india-cgss-2025"],"source_kind":"official_scheme","tags":["startup","credit-guarantee"]},
+    {"case_id":"heldout-seed-incubators","query":"Find the official Startup India source for seed support delivered through eligible incubators.","expected_document_ids":["startup-india-sisfs"],"source_kind":"official_scheme","tags":["startup","seed"]},
+    {"case_id":"heldout-digital-accelerator","query":"Which official MeitY Startup Hub source describes the SAMRIDH accelerator programme?","expected_document_ids":["meity-samridh"],"source_kind":"official_scheme","tags":["technology","accelerator"]},
+    {"case_id":"heldout-micro-credit","query":"Take me to the Department of Financial Services source for the Mudra micro-enterprise loan programme.","expected_document_ids":["dfs-pmmy"],"source_kind":"official_scheme","tags":["credit","mudra"]},
+    {"case_id":"heldout-cashflow-ratios","query":"How can a small business analyse cash flow statements, financial ratios and the time value of money?","expected_document_ids":["msu-small-business-financial-management"],"source_kind":"business_guide","tags":["finance","cash-flow"]},
+    {"case_id":"heldout-annuity-payments","query":"I need worked methods for annuities, compound interest and calculating recurring loan payments.","expected_document_ids":["ecampus-business-finance-mathematics"],"source_kind":"business_guide","tags":["finance","mathematics"]},
+    {"case_id":"heldout-crossborder-brand","query":"How should a smaller company adapt its brand and digital channels for culturally different international markets?","expected_document_ids":["fanshawe-global-digital-marketing"],"source_kind":"business_guide","tags":["international","marketing"]},
+    {"case_id":"heldout-campaign-analytics","query":"How do search optimisation, content, customer journeys and campaign analytics fit into a digital marketing plan?","expected_document_ids":["mcmaster-digital-marketing-fundamentals"],"source_kind":"business_guide","tags":["digital-marketing","analytics"]},
+    {"case_id":"heldout-green-intrapreneurship","query":"How can intrapreneurs create social and environmental value inside an established organisation?","expected_document_ids":["mdpi-sustainable-entrepreneurship"],"source_kind":"business_guide","tags":["sustainability","intrapreneurship"]},
+    {"case_id":"heldout-climate-venture-learning","query":"What learning activities help entrepreneurs design ventures that respond to climate action challenges?","expected_document_ids":["lapland-sustainable-entrepreneurship"],"source_kind":"business_guide","tags":["climate","entrepreneurship"]},
+    {"case_id":"heldout-media-revenue","query":"How can an independent media venture test audiences and choose a sustainable revenue model?","expected_document_ids":["rebus-media-innovation-entrepreneurship"],"source_kind":"business_guide","tags":["media","revenue"]},
+    {"case_id":"heldout-smart-sme-roadmap","query":"What roadmap can an SME use for smart manufacturing, connected operations and Industry 4.0 adoption?","expected_document_ids":["springer-industry-4-smes","mdpi-industry-4-smes"],"source_kind":"business_guide","tags":["industry-4","manufacturing"]},
+    {"case_id":"heldout-core-business-functions","query":"Give me a learning source covering ownership, management, operations, accounting, marketing and human resources.","expected_document_ids":["centennial-business-fundamentals","virginia-tech-fundamentals-business"],"source_kind":"business_guide","tags":["business-basics"]},
+    {"case_id":"heldout-youth-opportunity-plan","query":"Which practical entrepreneurship guide helps a young founder recognise an opportunity and turn it into an actionable plan?","expected_document_ids":["springer-practical-youth-entrepreneurs","bccampus-entrepreneurship-toolkit"],"source_kind":"business_guide","tags":["youth","opportunity"]}
+  ]
+}

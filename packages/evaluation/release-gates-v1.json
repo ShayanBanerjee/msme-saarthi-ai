@@ -1,0 +1,17 @@
+{
+  "schema_version": "1",
+  "alias": "msme-saarthi-semantic-read",
+  "required_document_count": 31,
+  "fusion_rank_constant": 60,
+  "fusion_lexical_weight": 0.8,
+  "fusion_vector_weight": 1.0,
+  "fusion_max_chunks_per_document": 1,
+  "minimum_tuning_hybrid_hit_rate_at_5": 0.95,
+  "minimum_heldout_hybrid_hit_rate_at_5": 0.90,
+  "minimum_heldout_official_hit_rate_at_5": 0.85,
+  "minimum_heldout_guide_hit_rate_at_5": 0.95,
+  "minimum_heldout_hybrid_mrr": 0.65,
+  "minimum_heldout_hybrid_ndcg_at_10": 0.70,
+  "required_citation_resolvability": 1.0,
+  "required_citation_metadata_completeness": 1.0
+}

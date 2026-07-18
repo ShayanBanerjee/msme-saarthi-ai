@@ -2,8 +2,10 @@ from datetime import date
 
 from worker.pipeline import (
     FetchedSource,
+    HttpSourceFetcher,
     SourceKind,
     SourceSpec,
+    build_index_definition,
     chunk_text,
     deterministic_embedding,
     extract_pages,
@@ -72,3 +74,34 @@ def test_pdf_parser_rejects_non_pdf_content() -> None:
         assert "signature" in str(error)
     else:
         raise AssertionError("non-PDF content must be rejected")
+
+
+def test_production_index_uses_explicit_hnsw_and_strict_citation_mapping() -> None:
+    definition = build_index_definition(embedding_dimensions=1_024, profile="production")
+    settings = definition["settings"]
+    mappings = definition["mappings"]
+
+    assert isinstance(settings, dict)
+    assert settings["number_of_replicas"] == 1
+    assert isinstance(mappings, dict)
+    assert mappings["dynamic"] == "strict"
+    properties = mappings["properties"]
+    assert isinstance(properties, dict)
+    embedding = properties["embedding"]
+    assert isinstance(embedding, dict)
+    assert embedding["dimension"] == 1_024
+    assert embedding["method"] == {
+        "name": "hnsw",
+        "space_type": "cosinesimil",
+        "engine": "lucene",
+        "parameters": {"ef_construction": 128, "m": 24},
+    }
+
+
+def test_source_fetcher_rejects_invalid_retry_count() -> None:
+    try:
+        HttpSourceFetcher(max_attempts=0)
+    except ValueError as error:
+        assert "max_attempts" in str(error)
+    else:
+        raise AssertionError("invalid retry count must fail")
